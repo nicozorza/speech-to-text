@@ -1,6 +1,7 @@
 import os
-from src.utils.AudioFeature import FeatureConfig
+from src.utils.AudioFeature import FeatureConfig, AudioFeature
 from src.utils.Database import DatabaseItem, Database
+from src.utils.Label import Label
 from src.utils.ProjectData import ProjectData
 
 # Configuration of the features
@@ -26,11 +27,18 @@ for wav_index in range(len(wav_names)):
     wav_filename = project_data.WAV_DIR + '/' + wav_names[wav_index]
     label_filename = project_data.TRANSCRIPTION_DIR + '/' + wav_names[wav_index].split(".")[0] + '.TXT'
 
+    audio_feature = AudioFeature.fromFile(wav_filename, feature_config)
+
+    with open(label_filename, 'r') as f:
+        transcription = f.readlines()[0]
+        # Delete blanks at the beginning and the end of the transcription, transform to lowercase,
+        # delete numbers in the beginning, etc.
+        transcription = (' '.join(transcription.strip().lower().split(' ')[2:]).replace('.', ''))
+
+    label = Label(transcription)
+
     # Create database item
-    item = DatabaseItem.fromFile(
-        wav_name=wav_filename,
-        label_name=label_filename,
-        feature_config=feature_config)
+    item = DatabaseItem(audio_feature, label)
 
     # Add the new data to the database
     database.append(item)
@@ -42,7 +50,7 @@ print("Database generated")
 print("Number of elements in database: " + str(len(database)))
 
 # Save the database into a file
-train_database, val_database, test_database = database.get_training_databases(0.9, 0.1, 0.0)
+train_database, val_database, test_database = database.split_database(0.9, 0.1, 0.0)
 train_database.save(project_data.TRAIN_DATABASE_FILE)
 val_database.save(project_data.VAL_DATABASE_FILE)
 test_database.save(project_data.TEST_DATABASE_FILE)

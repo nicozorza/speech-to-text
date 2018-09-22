@@ -1,11 +1,9 @@
 import tensorflow as tf
 from tensorflow.contrib.layers import l2_regularizer
-
 from src.neural_network.NetworkData import NetworkData
 from src.neural_network.RNN import RNNClass
 from src.utils.Database import Database
 from src.utils.ProjectData import ProjectData
-from src.neural_network.data_conversion import indexToStr
 
 ###########################################################################################################
 # Load project data
@@ -60,8 +58,8 @@ train_database = Database.fromFile(project_data.TRAIN_DATABASE_FILE, project_dat
 val_database = Database.fromFile(project_data.VAL_DATABASE_FILE, project_data)
 
 # TODO Add a different method for this
-train_feats, train_labels, _, _, _, _ = train_database.get_training_sets(1.0, 0.0, 0.0)
-val_feats, val_labels, _, _, _, _ = val_database.get_training_sets(1.0, 0.0, 0.0)
+train_feats, train_labels, _, _, _, _ = train_database.split_sets(1.0, 0.0, 0.0)
+val_feats, val_labels, _, _, _, _ = val_database.split_sets(1.0, 0.0, 0.0)
 
 network.train(
     train_features=train_feats,
@@ -78,6 +76,6 @@ network.train(
 network.validate(val_feats, val_labels, show_partial=False)
 
 
-for i in range(len(val_feats)):
-    print('Predicted: {}'.format(network.predict(val_feats[i])))
-    print('Target: {}'.format(indexToStr(val_labels[i])))
+# for i in range(len(val_feats)):
+#     print('Predicted: {}'.format(network.predict(val_feats[i])))
+#     print('Target: {}'.format(indexToStr(val_labels[i])))

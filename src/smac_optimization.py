@@ -33,8 +33,8 @@ train_database = Database.fromFile(project_data.TRAIN_DATABASE_FILE, project_dat
 val_database = Database.fromFile(project_data.VAL_DATABASE_FILE, project_data)
 
 # TODO Add a different method for this
-train_feats, train_labels, _, _, _, _ = train_database.get_training_sets(1.0, 0.0, 0.0)
-val_feats, val_labels, _, _, _, _ = val_database.get_training_sets(1.0, 0.0, 0.0)
+train_feats, train_labels, _, _, _, _ = train_database.split_sets(1.0, 0.0, 0.0)
+val_feats, val_labels, _, _, _, _ = val_database.split_sets(1.0, 0.0, 0.0)
 
 # -----------------------------------------------------------------------------------------
 optimization_epochs = 100
