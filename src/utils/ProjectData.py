@@ -4,6 +4,8 @@ class ProjectData:
         # Files data
         self.SOURCE_DIR = 'data'
         self.WAV_DIR = self.SOURCE_DIR + '/wav'
+        self.WAV_TRAIN_DIR = self.WAV_DIR + '/wav_train'
+        self.WAV_TEST_DIR = self.WAV_DIR + '/wav_test'
         self.TRANSCRIPTION_DIR = self.SOURCE_DIR + '/transcription'
         self.DATABASE_DIR = self.SOURCE_DIR
         self.TRAIN_DATABASE_NAME = 'train_database.db'

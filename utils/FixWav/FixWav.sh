@@ -4,7 +4,8 @@
 if [ "$#" -eq 1 ]
 then
 	search_dir=$1
-	this_dir=$PWM
+	this_dir=FixWav
+	echo $this_dir
 
 	cd ..
 	for file in "$search_dir"/*
