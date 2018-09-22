@@ -1,8 +1,5 @@
-import codecs
 import os
-
-import unidecode
-
+from src.neural_network.data_conversion import remove_accents
 from src.utils.AudioFeature import FeatureConfig, AudioFeature
 from src.utils.Database import DatabaseItem, Database
 from src.utils.Label import Label
@@ -42,7 +39,7 @@ for file in transcription_file_list:
             aux = line.split(' ', 1)
             name = aux[0].rstrip()
             # Remove accents
-            transcription = unidecode.unidecode(aux[1].rstrip())
+            transcription = remove_accents(aux[1].rstrip())
             dict = {'name': name, 'transcription': transcription}
             transcription_list.append(dict)
 

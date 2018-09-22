@@ -15,7 +15,7 @@ network_data.model_path = project_data.MODEL_PATH
 network_data.checkpoint_path = project_data.CHECKPOINT_PATH
 network_data.tensorboard_path = project_data.TENSORBOARD_PATH
 
-network_data.num_classes = ord('z') - ord('a') + 1 + 1 + 1
+network_data.num_classes = ord('z') - ord('a') + 1 + 1 + 1 + 1
 network_data.num_features = 26
 
 network_data.num_input_dense_layers = 1
@@ -70,7 +70,7 @@ network.train(
     save_freq=10,
     use_tensorboard=True,
     tensorboard_freq=10,
-    training_epochs=20,
+    training_epochs=50,
     batch_size=50
 )
 
