@@ -1,0 +1,3 @@
+"CPU Time Used","Estimated Training Performance","Wallclock Time","Incumbent ID","Automatic Configurator (CPU) Time","Configuration..."
+0.000000, 2147483648.000000, 0.000189, 1, 0.000189, bw_1='100', dense_regularizer='0.0', fw_1='100', input_dense_1='100', input_dense_depth=''1'', input_keep_1='1.0', out_dense_1='100', out_dense_depth=''1'', output_keep_1='1.0', rnn_depth=''1'', rnn_regularizer='0.0'
+8605.762007, 0.011312, 8605.894136, 1, 0.132129, bw_1='100', dense_regularizer='0.0', fw_1='100', input_dense_1='100', input_dense_depth=''1'', input_keep_1='1.0', out_dense_1='100', out_dense_depth=''1'', output_keep_1='1.0', rnn_depth=''1'', rnn_regularizer='0.0'

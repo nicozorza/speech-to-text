@@ -1,0 +1,24 @@
+bw_1 integer [10, 250] [100]
+dense_regularizer real [0.0, 1.0] [0.0]
+fw_1 integer [10, 250] [100]
+input_dense_1 integer [50, 250] [100]
+input_dense_depth categorical {1, 2} [1]
+input_keep_1 real [0.5, 1.0] [1.0]
+out_dense_1 integer [50, 250] [100]
+out_dense_depth categorical {1, 2} [1]
+output_keep_1 real [0.5, 1.0] [1.0]
+rnn_depth categorical {1, 2} [1]
+rnn_regularizer real [0.0, 1.0] [0.0]
+bw_2 integer [10, 250] [100]
+fw_2 integer [10, 250] [100]
+input_dense_2 integer [50, 250] [100]
+input_keep_2 real [0.5, 1.0] [1.0]
+out_dense_2 integer [50, 250] [100]
+output_keep_2 real [0.5, 1.0] [1.0]
+
+input_dense_2 | input_dense_depth in {2}
+input_keep_2 | input_dense_depth in {2}
+out_dense_2 | out_dense_depth in {2}
+output_keep_2 | out_dense_depth in {2}
+bw_2 | rnn_depth in {2}
+fw_2 | rnn_depth in {2}

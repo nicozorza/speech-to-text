@@ -1,0 +1,11 @@
+bw_1:207
+dense_regularizer:0.4947485918464014
+fw_1:234
+input_dense_1:112
+input_dense_depth:1
+input_keep_1:0.5629235879822775
+out_dense_1:121
+out_dense_depth:1
+output_keep_1:0.6044120200497007
+rnn_depth:1
+rnn_regularizer:0.6728075949932836
