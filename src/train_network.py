@@ -1,7 +1,8 @@
 import tensorflow as tf
 from tensorflow.contrib.layers import l2_regularizer
 from src.neural_network.NetworkData import NetworkData
-from src.neural_network.RNN import RNNClass
+from src.neural_network.ZorzNet import ZorzNet
+from src.neural_network.data_conversion import indexToStr
 from src.utils.Database import Database
 from src.utils.ProjectData import ProjectData
 
@@ -46,20 +47,20 @@ network_data.keep_dropout_output = [0.5, 0.5]
 network_data.decoder_function = tf.nn.ctc_greedy_decoder
 
 network_data.learning_rate = 0.001
-network_data.adam_epsilon = 0.0001
+network_data.adam_epsilon = 0.001
 network_data.optimizer = tf.train.AdamOptimizer(learning_rate=network_data.learning_rate,
                                                 epsilon=network_data.adam_epsilon)
 ###########################################################################################################
 
-network = RNNClass(network_data)
+network = ZorzNet(network_data)
 network.create_graph()
 
 train_database = Database.fromFile(project_data.TRAIN_DATABASE_FILE, project_data)
-val_database = Database.fromFile(project_data.VAL_DATABASE_FILE, project_data)
+test_database = Database.fromFile(project_data.TEST_DATABASE_FILE, project_data)
 
 # TODO Add a different method for this
 train_feats, train_labels, _, _, _, _ = train_database.split_sets(1.0, 0.0, 0.0)
-val_feats, val_labels, _, _, _, _ = val_database.split_sets(1.0, 0.0, 0.0)
+test_feats, test_labels, _, _, _, _ = test_database.split_sets(1.0, 0.0, 0.0)
 
 network.train(
     train_features=train_feats,
@@ -69,13 +70,13 @@ network.train(
     save_freq=10,
     use_tensorboard=True,
     tensorboard_freq=10,
-    training_epochs=2,
+    training_epochs=20,
     batch_size=50
 )
 
-network.validate(val_feats, val_labels, show_partial=False)
+network.validate(test_feats, test_labels, show_partial=False, batch_size=20)
 
 
-# for i in range(len(val_feats)):
-#     print('Predicted: {}'.format(network.predict(val_feats[i])))
-#     print('Target: {}'.format(indexToStr(val_labels[i])))
+for i in range(3):     # len(val_feats)):
+    print('Predicted: {}'.format(network.predict(test_feats[i])))
+    print('Target: {}'.format(indexToStr(test_labels[i])))

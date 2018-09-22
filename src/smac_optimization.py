@@ -22,7 +22,7 @@ from tensorflow.contrib.layers import l2_regularizer
 
 from src.neural_network.data_conversion import indexToStr
 from src.neural_network.NetworkData import NetworkData
-from src.neural_network.RNN import RNNClass
+from src.neural_network.ZorzNet import ZorzNet
 from src.utils.Database import Database
 from src.utils.ProjectData import ProjectData
 from src.utils.smac_utils import wait_for_user_input_non_block, remove_if_exist
@@ -158,7 +158,7 @@ def get_network_data(args):
 def objective(args):
     network_data = get_network_data(args)
 
-    network = RNNClass(network_data)
+    network = ZorzNet(network_data)
     network.create_graph()
 
     network.train(
@@ -269,7 +269,7 @@ print("optimized hyperparameters:")
 print(optimized_hyper)
 
 optimized_net_data = get_network_data(optimized_hyper)
-optimized_net = RNNClass(optimized_net_data)
+optimized_net = ZorzNet(optimized_net_data)
 optimized_net.create_graph()
 
 optimized_net.train(
