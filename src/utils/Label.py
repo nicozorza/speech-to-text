@@ -6,6 +6,8 @@ class Label:
     # Constants
     SPACE_TOKEN = '<space>'
     SPACE_INDEX = 0
+    ENIE_TOKEN = '<enie>'
+    ENIE_INDEX = ord('z') - ord('a') + 2
     FIRST_INDEX = ord('a') - 1  # 0 is reserved to space
 
     def __init__(self, transcription: str):
@@ -27,7 +29,17 @@ class Label:
             # Adding blank label
             index = np.hstack([self.SPACE_TOKEN if x == '' else list(x) for x in self.__targets])
             # Transform char into index
-            index = np.asarray([self.SPACE_INDEX if x == '<space>' else ord(x) - self.FIRST_INDEX for x in index])
+            index_list = []
+            for x in index:
+                if x == '<space>':
+                    index_list.append(self.SPACE_INDEX)
+                elif x == 'ñ':
+                    index_list.append(self.ENIE_INDEX)
+                else:
+                    index_list.append(ord(x) - self.FIRST_INDEX)
+
+            index = np.asarray(index_list)
+
             return index
         else:
             return self.__indices

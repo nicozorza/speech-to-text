@@ -1,8 +1,16 @@
+import unicodedata
+
 import numpy as np
 
 
 def indexToStr(seq) -> str:
-    str_decoded = ''.join([chr(x) for x in seq + (ord('a') - 1)])
+    char_list = []
+    for x in seq + (ord('a') - 1):
+        if x - (ord('a') - 1) == 27:    # Replace enie
+            char_list.append(chr(241))
+        else:
+            char_list.append(chr(x))
+    str_decoded = ''.join(char_list)
     # # Replacing blank label to none
     str_decoded = str_decoded.replace(chr(ord('z') + 1), '')
     # # Replacing space label to space
@@ -89,3 +97,10 @@ def padSequences(sequences, maxlen=None, dtype=np.float32,
         else:
             raise ValueError('Padding type "%s" not understood' % padding)
     return x, lengths
+
+
+def remove_accents(data: str) -> str:
+    data = data.replace('ñ', '-&-')
+    data = str(unicodedata.normalize('NFKD', data).encode('ascii', 'ignore'))[2:-1]
+    data = data.replace('-&-', 'ñ')
+    return data
