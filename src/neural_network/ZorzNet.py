@@ -9,6 +9,7 @@ from tensorflow.python.training.saver import Saver
 
 from src.neural_network.data_conversion import padSequences, sparseTupleFrom, indexToStr
 from src.neural_network.NetworkData import NetworkData
+from src.neural_network.network_utils import dense_layer, dense_multilayer, bidirectional_rnn, unidirectional_rnn
 
 
 class ZorzNet:
@@ -60,90 +61,65 @@ class ZorzNet:
 
             self.rnn_input = tf.identity(self.input_feature)
             with tf.name_scope("input_dense"):
-                for _ in range(self.network_data.num_input_dense_layers):
-                    self.rnn_input = tf.layers.dense(
-                        inputs=self.rnn_input,
-                        units=self.network_data.num_input_dense_units[_],
-                        activation=self.network_data.input_dense_activations[_],
-                        name='input_dense_layer_{}'.format(_)
-                    )
-                    if self.network_data.input_batch_normalization:
-                        self.rnn_input = tf.layers.batch_normalization(self.rnn_input, name="input_batch_norm_{}".format(_))
-                    if self.network_data.use_dropout:
-                        self.rnn_input = tf.layers.dropout(self.rnn_input,
-                                                           1-self.network_data.keep_dropout_input[_],
-                                                           training=self.tf_is_traing_pl,
-                                                           name="input_dropout_{}".format(_))
-                    tf.summary.histogram('input_dense_layer', self.rnn_input)
+                self.rnn_input = dense_multilayer(input_ph=self.rnn_input,
+                                                  num_layers=self.network_data.num_input_dense_layers,
+                                                  num_units=self.network_data.num_input_dense_units,
+                                                  name='input_dense_layer',
+                                                  activation_list=self.network_data.input_dense_activations,
+                                                  use_batch_normalization=self.network_data.input_batch_normalization,
+                                                  train_ph=self.tf_is_traing_pl,
+                                                  use_tensorboard=True,
+                                                  keep_prob_list=self.network_data.keep_dropout_input,
+                                                  tensorboard_scope='input_dense_layer')
 
             with tf.name_scope("RNN_cell"):
                 if self.network_data.is_bidirectional:
-                    # Forward direction cell:
-                    lstm_fw_cell = [tf.nn.rnn_cell.LSTMCell(num_units=self.network_data.num_fw_cell_units[_],
-                                                            state_is_tuple=True,
-                                                            name='FW_LSTM_{}'.format(_),
-                                                            activation=self.network_data.cell_fw_activation[_]
-                                                            ) for _ in range(len(self.network_data.num_fw_cell_units))]
-                    # Backward direction cell:
-                    lstm_bw_cell = [tf.nn.rnn_cell.LSTMCell(num_units=self.network_data.num_bw_cell_units[_],
-                                                            state_is_tuple=True,
-                                                            name='BW_LSTM_{}'.format(_),
-                                                            activation=self.network_data.cell_bw_activation[_]
-                                                            ) for _ in range(len(self.network_data.num_bw_cell_units))]
-
-                    self.rnn_outputs, output_state_fw, output_state_bw = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(
-                        cells_fw=lstm_fw_cell,
-                        cells_bw=lstm_bw_cell,
-                        inputs=self.rnn_input,
-                        dtype=tf.float32,
-                        time_major=False,
-                        sequence_length=self.seq_len,
-                        scope="RNN_cell")
+                    self.rnn_outputs = bidirectional_rnn(
+                        input_ph=self.rnn_input,
+                        seq_len_ph=self.seq_len,
+                        num_layers=len(self.network_data.num_fw_cell_units),
+                        num_fw_cell_units=self.network_data.num_fw_cell_units,
+                        num_bw_cell_units=self.network_data.num_bw_cell_units,
+                        name="RNN_cell",
+                        activation_fw_list=self.network_data.cell_fw_activation,
+                        activation_bw_list=self.network_data.cell_bw_activation,
+                        use_tensorboard=True,
+                        tensorboard_scope='RNN')
 
                 else:
-                    self.rnn_cell = [tf.nn.rnn_cell.LSTMCell(num_units=self.network_data.num_cell_units[_],
-                                                             state_is_tuple=True,
-                                                             name='LSTM_{}'.format(_),
-                                                             activation=self.network_data.cell_activation[_]
-                                                             ) for _ in range(len(self.network_data.num_cell_units))]
-
-                    self.multi_rrn_cell = tf.nn.rnn_cell.MultiRNNCell(self.rnn_cell, state_is_tuple=True)
-
-                    self.rnn_outputs, _ = tf.nn.dynamic_rnn(
-                        cell=self.multi_rrn_cell,
-                        inputs=self.rnn_input,
-                        sequence_length=self.seq_len,
-                        dtype=tf.float32,
-                        scope="RNN_cell"
-                    )
-                tf.summary.histogram('RNN', self.rnn_outputs)
+                    self.rnn_outputs = unidirectional_rnn(
+                        input_ph=self.rnn_input,
+                        seq_len_ph=self.seq_len,
+                        num_layers=len(self.network_data.num_cell_units),
+                        num_cell_units=self.network_data.num_cell_units,
+                        name="RNN_cell",
+                        activation_list=self.network_data.cell_activation,
+                        use_tensorboard=True,
+                        tensorboard_scope='RNN')
 
             with tf.name_scope("dense_layers"):
-                for _ in range(self.network_data.num_dense_layers):
-                    self.rnn_outputs = tf.layers.dense(
-                        inputs=self.rnn_outputs,
-                        units=self.network_data.num_dense_units[_],
-                        activation=self.network_data.dense_activations[_],
-                        name='dense_layer_{}'.format(_)
-                    )
-                    if self.network_data.dense_batch_normalization:
-                        self.rnn_outputs = tf.layers.batch_normalization(self.rnn_outputs, name="batch_norm_{}".format(_))
-                    if self.network_data.use_dropout:
-                        self.rnn_outputs = tf.layers.dropout(self.rnn_outputs,
-                                                             1-self.network_data.keep_dropout_output[_],
-                                                             training=self.tf_is_traing_pl,
-                                                             name="output_dropout_{}".format(_)
-                                                             )
-                    tf.summary.histogram('dense_layer', self.rnn_outputs)
+                self.rnn_outputs = dense_multilayer(input_ph=self.rnn_outputs,
+                                                    num_layers=self.network_data.num_dense_layers,
+                                                    num_units=self.network_data.num_dense_units,
+                                                    name='dense_layer',
+                                                    activation_list=self.network_data.dense_activations,
+                                                    use_batch_normalization=self.network_data.dense_batch_normalization,
+                                                    train_ph=self.tf_is_traing_pl,
+                                                    use_tensorboard=True,
+                                                    keep_prob_list=self.network_data.keep_dropout_output,
+                                                    tensorboard_scope='dense_layer')
 
             with tf.name_scope("dense_output"):
-                self.dense_output_no_activation = tf.layers.dense(
-                    inputs=self.rnn_outputs,
-                    units=self.network_data.num_classes,
-                    activation=self.network_data.out_activation,
-                    # kernel_regularizer=self.network_data.out_regularizer,
-                    name='dense_output_no_activation'
-                )
+                self.dense_output_no_activation = dense_layer(input_ph=self.rnn_outputs,
+                                                              num_units=self.network_data.num_classes,
+                                                              name='dense_output_no_activation',
+                                                              activation=self.network_data.out_activation,
+                                                              use_batch_normalization=False,
+                                                              train_ph=False,
+                                                              use_tensorboard=True,
+                                                              keep_prob=1,
+                                                              tensorboard_scope='dense_output')
+
                 self.dense_output = tf.nn.softmax(self.dense_output_no_activation, name='dense_output')
                 tf.summary.histogram('dense_output', self.dense_output)
 
@@ -285,7 +261,7 @@ class ZorzNet:
 
                 if use_tensorboard:
                     if epoch % tensorboard_freq == 0 and self.network_data.tensorboard_path is not None:
-                        asd = len(train_features)
+
                         random_index = random.randint(0, len(train_features)-1)
                         feature = [train_features[random_index]]
                         label = [train_labels[random_index]]
