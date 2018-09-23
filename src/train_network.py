@@ -23,7 +23,9 @@ network_data.num_input_dense_units = [160]
 network_data.input_dense_activations = [tf.nn.tanh] * network_data.num_input_dense_layers
 network_data.input_batch_normalization = True
 
-network_data.is_bidirectional = True
+network_data.is_bidirectional = False
+network_data.num_cell_units = [250]
+network_data.cell_activation = [tf.nn.tanh]
 network_data.num_fw_cell_units = [250]
 network_data.num_bw_cell_units = [110]
 network_data.cell_fw_activation = [tf.nn.tanh]
@@ -59,8 +61,8 @@ train_database = Database.fromFile(project_data.TRAIN_DATABASE_FILE, project_dat
 test_database = Database.fromFile(project_data.TEST_DATABASE_FILE, project_data)
 
 # TODO Add a different method for this
-train_feats, train_labels, _, _, _, _ = train_database.split_sets(1.0, 0.0, 0.0)
-test_feats, test_labels, _, _, _, _ = test_database.split_sets(1.0, 0.0, 0.0)
+train_feats, train_labels = train_database.to_set()
+test_feats, test_labels = test_database.to_set()
 
 network.train(
     train_features=train_feats,
@@ -69,7 +71,7 @@ network.train(
     save_partial=True,
     save_freq=10,
     use_tensorboard=True,
-    tensorboard_freq=10,
+    tensorboard_freq=5,
     training_epochs=50,
     batch_size=50
 )
@@ -77,6 +79,6 @@ network.train(
 network.validate(test_feats, test_labels, show_partial=False, batch_size=20)
 
 
-for i in range(3):     # len(val_feats)):
+for i in range(2):     # len(val_feats)):
     print('Predicted: {}'.format(network.predict(test_feats[i])))
     print('Target: {}'.format(indexToStr(test_labels[i])))

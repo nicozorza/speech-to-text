@@ -127,6 +127,13 @@ class Database:
 
         return train_database, val_database, test_database
 
+    def to_set(self) -> Tuple[List[np.ndarray], List[np.ndarray]]:
+        features = self.features_list
+        features = [np.reshape(feature, [len(feature), np.shape(feature)[1]]) for feature in features]
+        labels = self.labels_list
+
+        return features, labels
+
     def sort_by_length(self):
         self.__database = sorted(self.__database, key=lambda x: len(x))
 
