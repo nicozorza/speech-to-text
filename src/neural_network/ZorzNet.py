@@ -20,6 +20,7 @@ class ZorzNet:
         self.seq_len = None
         self.input_feature = None
         self.input_label = None
+        self.output_seq = None
         self.rnn_cell = None
         self.multi_rrn_cell = None
         self.rnn_input = None
@@ -42,7 +43,7 @@ class ZorzNet:
     def create_graph(self):
 
         with self.graph.as_default():
-            self.tf_is_traing_pl = tf.placeholder_with_default(True, shape=(), name='is_training')
+            self.tf_is_traing_pl = tf.placeholder_with_default(False, shape=(), name='is_training')
 
             with tf.name_scope("seq_len"):
                 self.seq_len = tf.placeholder(tf.int32, shape=[None], name="sequence_length")
@@ -153,6 +154,8 @@ class ZorzNet:
             with tf.name_scope("decoder"):
                 self.output_time_major = tf.transpose(self.dense_output, (1, 0, 2))
                 self.decoded, log_prob = self.network_data.decoder_function(self.output_time_major, self.seq_len)
+                aux = [tf.sparse_to_dense(st.indices, st.dense_shape, st.values, default_value=-1) for st in self.decoded]
+                self.output_seq = tf.identity(aux, name="output_seq")
 
             with tf.name_scope("label_error_rate"):
                 # Inaccuracy: label error rate
@@ -173,7 +176,7 @@ class ZorzNet:
             # print('Restoring checkpoint')
         else:
             session = tf.Session()
-            session.run(tf.initialize_all_variables())
+            session.run(tf.global_variables_initializer())
 
     def save_model(self, sess: tf.Session):
         if self.network_data.model_path is not None:
@@ -274,7 +277,8 @@ class ZorzNet:
                         tensorboard_feed_dict = {
                             self.input_feature: tensorboard_features,
                             self.seq_len: tensorboard_seq_len,
-                            self.input_label: tensorboard_labels
+                            self.input_label: tensorboard_labels,
+                            self.tf_is_traing_pl: True
                         }
                         s = sess.run(self.merged_summary, feed_dict=tensorboard_feed_dict)
                         train_writer.add_summary(s, epoch)
