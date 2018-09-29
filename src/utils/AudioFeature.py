@@ -23,6 +23,7 @@ class FeatureConfig:
 class AudioFeature:
     def __init__(self):
         self.__feature = np.empty(0)
+        self.__fs: float = None
 
     def __len__(self):
         return len(self.__feature)
@@ -30,6 +31,10 @@ class AudioFeature:
     @property
     def feature(self) -> np.ndarray:
         return self.__feature
+
+    @property
+    def fs(self) -> float:
+        return self.__fs
 
     def mfcc(self, audio, fs: float, winlen: float, winstep: float, numcep: int,
              nfilt: int, nfft: int, lowfreq, highfreq, preemph: float) -> np.ndarray:
@@ -60,9 +65,10 @@ class AudioFeature:
         return AudioFeature.fromAudio(signal, fs, feature_config, normalize_audio)
 
     @staticmethod
-    def fromFeature(feature: Tuple[np.ndarray, np.ndarray, None]) -> 'AudioFeature':
+    def fromFeature(feature: Tuple[np.ndarray, np.ndarray, None], fs: float=None) -> 'AudioFeature':
         audio_feature = AudioFeature()
         audio_feature.__feature = feature
+        audio_feature.__fs = fs
 
         return audio_feature
 
