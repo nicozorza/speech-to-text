@@ -35,12 +35,7 @@ class NetworkData:
         self.num_dense_units: List[int] = list()
         self.dense_activations: List[int] = list()
         self.dense_batch_normalization: bool = False
-
         self.dense_regularizer: float = None
-
-        self.out_activation = None
-        self.out_regularizer_beta: float = None
-        self.out_regularizer = None
 
         self.optimizer: Optimizer = None
 

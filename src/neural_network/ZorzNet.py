@@ -1,12 +1,10 @@
 import os
 import random
 import time
-
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import graph_io
 from tensorflow.python.training.saver import Saver
-
 from src.neural_network.data_conversion import padSequences, sparseTupleFrom, indexToStr
 from src.neural_network.NetworkData import NetworkData
 from src.neural_network.network_utils import dense_layer, dense_multilayer, bidirectional_rnn, unidirectional_rnn
@@ -113,7 +111,7 @@ class ZorzNet:
                 self.dense_output_no_activation = dense_layer(input_ph=self.rnn_outputs,
                                                               num_units=self.network_data.num_classes,
                                                               name='dense_output_no_activation',
-                                                              activation=self.network_data.out_activation,
+                                                              activation=None,
                                                               use_batch_normalization=False,
                                                               train_ph=False,
                                                               use_tensorboard=True,
@@ -156,7 +154,9 @@ class ZorzNet:
 
             with tf.name_scope("label_error_rate"):
                 # Inaccuracy: label error rate
-                self.ler = tf.reduce_mean(tf.edit_distance(tf.cast(self.decoded[0], tf.int32), self.input_label))
+                self.ler = tf.reduce_mean(tf.edit_distance(hypothesis=tf.cast(self.decoded[0], tf.int32),
+                                                           truth=self.input_label,
+                                                           normalize=True))
                 tf.summary.scalar('label_error_rate', tf.reduce_mean(self.ler))
 
             self.checkpoint_saver = tf.train.Saver(save_relative_paths=True)
@@ -242,7 +242,7 @@ class ZorzNet:
                     # Padding input to max_time_step of this batch
                     batch_train_features, batch_train_seq_len = padSequences(batch_features)
 
-                    # Converting to sparse representation so as to to feed SparseTensor input
+                    # Converting to sparse representation so as to feed SparseTensor input
                     batch_train_labels = sparseTupleFrom(batch_labels)
 
                     feed_dict = {
