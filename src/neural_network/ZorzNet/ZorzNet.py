@@ -82,7 +82,8 @@ class ZorzNet:
                         activation_fw_list=self.network_data.cell_fw_activation,
                         activation_bw_list=self.network_data.cell_bw_activation,
                         use_tensorboard=True,
-                        tensorboard_scope='RNN')
+                        tensorboard_scope='RNN',
+                        output_size=self.network_data.rnn_output_sizes)
 
                 else:
                     self.rnn_outputs = unidirectional_rnn(
@@ -93,7 +94,8 @@ class ZorzNet:
                         name="RNN_cell",
                         activation_list=self.network_data.cell_activation,
                         use_tensorboard=True,
-                        tensorboard_scope='RNN')
+                        tensorboard_scope='RNN',
+                        output_size=self.network_data.rnn_output_sizes)
 
             with tf.name_scope("dense_layers"):
                 self.rnn_outputs = dense_multilayer(input_ph=self.rnn_outputs,

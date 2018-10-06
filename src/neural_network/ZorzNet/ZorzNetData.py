@@ -22,10 +22,13 @@ class ZorzNetData:
         self.num_cell_units: List[int] = None
         self.rnn_regularizer: float = 0
         self.cell_activation: List[int] = list()
+
         self.num_fw_cell_units: List[int] = None
         self.num_bw_cell_units: List[int] = None
         self.cell_fw_activation: List[int] = list()
         self.cell_bw_activation: List[int] = list()
+
+        self.rnn_output_sizes: List[int] = None
 
         self.use_dropout: bool = False
         self.keep_dropout_input: List[float] = None
