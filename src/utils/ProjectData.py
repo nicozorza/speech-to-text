@@ -16,7 +16,11 @@ class ProjectData:
         self.TEST_DATABASE_FILE = self.DATABASE_DIR + '/' + self.TEST_DATABASE_NAME
 
         self.OUT_DIR = 'out'
-        self.CHECKPOINT_PATH = self.OUT_DIR + '/' + 'checkpoint/'
-        self.MODEL_PATH = self.OUT_DIR + '/' + 'model/model'
 
-        self.TENSORBOARD_PATH = self.OUT_DIR + '/' + 'tensorboard/'
+        self.ZORZNET_CHECKPOINT_PATH = self.OUT_DIR + '/zorznet/' + 'checkpoint/'
+        self.ZORZNET_MODEL_PATH = self.OUT_DIR + '/zorznet/' + 'model/model'
+        self.ZORZNET_TENSORBOARD_PATH = self.OUT_DIR + '/zorznet/' + 'tensorboard/'
+
+        self.ENC_DEC_CHECKPOINT_PATH = self.OUT_DIR + '/enc_dec/' + 'checkpoint/'
+        self.ENC_DEC_MODEL_PATH = self.OUT_DIR + '/enc_dec/' + 'model/model'
+        self.ENC_DEC_TENSORBOARD_PATH = self.OUT_DIR + '/enc_dec/' + 'tensorboard/'

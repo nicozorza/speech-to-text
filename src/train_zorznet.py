@@ -11,9 +11,9 @@ from src.utils.ProjectData import ProjectData
 project_data = ProjectData()
 
 network_data = ZorzNetData()
-network_data.model_path = project_data.MODEL_PATH
-network_data.checkpoint_path = project_data.CHECKPOINT_PATH
-network_data.tensorboard_path = project_data.TENSORBOARD_PATH
+network_data.model_path = project_data.ZORZNET_MODEL_PATH
+network_data.checkpoint_path = project_data.ZORZNET_CHECKPOINT_PATH
+network_data.tensorboard_path = project_data.ZORZNET_TENSORBOARD_PATH
 
 network_data.num_classes = ord('z') - ord('a') + 1 + 1 + 1 + 1
 network_data.num_features = 26
@@ -31,6 +31,7 @@ network_data.num_bw_cell_units = [110]
 network_data.cell_fw_activation = [tf.nn.tanh]
 network_data.cell_bw_activation = [tf.nn.tanh]
 network_data.rnn_regularizer = 0.3
+network_data.rnn_output_sizes = [500]
 
 network_data.num_dense_layers = 2
 network_data.num_dense_units = [75, 180]
@@ -67,13 +68,13 @@ test_feats, test_labels = test_database.to_set()
 network.train(
     train_features=train_feats,
     train_labels=train_labels,
-    restore_run=True,
+    restore_run=False,
     save_partial=True,
     save_freq=10,
     use_tensorboard=True,
     tensorboard_freq=5,
-    training_epochs=50,
-    batch_size=50
+    training_epochs=1,
+    batch_size=1
 )
 
 network.validate(test_feats, test_labels, show_partial=False, batch_size=20)
