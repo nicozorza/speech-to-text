@@ -47,11 +47,12 @@ def dense_multilayer(input_ph, num_layers: int, num_units: List[int], name: str,
 
 
 def unidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_cell_units: List[int], name: str, activation_list,
-                       use_tensorboard: bool = True, tensorboard_scope: str = None):
+                       output_size: int = None, use_tensorboard: bool = True, tensorboard_scope: str = None):
     rnn_cell = [tf.nn.rnn_cell.LSTMCell(num_units=num_cell_units[_],
                                         state_is_tuple=True,
                                         name=name + '_{}'.format(_),
-                                        activation=activation_list[_]
+                                        activation=activation_list[_],
+                                        num_proj=output_size
                                         ) for _ in range(num_layers)]
 
     multi_rrn_cell = tf.nn.rnn_cell.MultiRNNCell(rnn_cell, state_is_tuple=True)
@@ -68,19 +69,21 @@ def unidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_cell_units: Li
 
 
 def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_fw_cell_units: List[int], num_bw_cell_units: List[int],
-                      name: str, activation_fw_list, activation_bw_list, use_tensorboard: bool = True,
-                      tensorboard_scope: str = None):
+                      name: str, activation_fw_list, activation_bw_list, output_size: int = None,
+                      use_tensorboard: bool = True, tensorboard_scope: str = None):
     # Forward direction cell:
     lstm_fw_cell = [tf.nn.rnn_cell.LSTMCell(num_units=num_fw_cell_units[_],
                                             state_is_tuple=True,
                                             name=name+'_fw_{}'.format(_),
-                                            activation=activation_fw_list[_]
+                                            activation=activation_fw_list[_],
+                                            num_proj=output_size
                                             ) for _ in range(num_layers)]
     # Backward direction cell:
     lstm_bw_cell = [tf.nn.rnn_cell.LSTMCell(num_units=num_bw_cell_units[_],
                                             state_is_tuple=True,
                                             name=name+'_bw_{}'.format(_),
-                                            activation=activation_bw_list[_]
+                                            activation=activation_bw_list[_],
+                                            num_proj=output_size
                                             ) for _ in range(num_layers)]
 
     input_ph, output_state_fw, output_state_bw = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(
