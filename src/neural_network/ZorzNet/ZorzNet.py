@@ -6,12 +6,12 @@ import tensorflow as tf
 from tensorflow.python.framework import graph_io
 from tensorflow.python.training.saver import Saver
 from src.neural_network.data_conversion import padSequences, sparseTupleFrom, indexToStr
-from src.neural_network.ZorzNet.NetworkData import NetworkData
+from src.neural_network.ZorzNet.ZorzNetData import ZorzNetData
 from src.neural_network.network_utils import dense_layer, dense_multilayer, bidirectional_rnn, unidirectional_rnn
 
 
 class ZorzNet:
-    def __init__(self, network_data: NetworkData):
+    def __init__(self, network_data: ZorzNetData):
         self.graph: tf.Graph = tf.Graph()
         self.network_data = network_data
 
