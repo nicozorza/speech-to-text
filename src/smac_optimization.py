@@ -17,7 +17,7 @@ from smac.utils.io.traj_logging import TrajLogger
 from tensorflow.contrib.layers import l2_regularizer
 
 from src.neural_network.data_conversion import indexToStr
-from src.neural_network.ZorzNet.NetworkData import NetworkData
+from src.neural_network.ZorzNet.ZorzNetData import ZorzNetData
 from src.neural_network.ZorzNet.ZorzNet import ZorzNet
 from src.utils.Database import Database
 from src.utils.ProjectData import ProjectData
@@ -90,7 +90,7 @@ def get_network_data(args):
 
     print(args)
 
-    network_data = NetworkData()
+    network_data = ZorzNetData()
     network_data.model_path = project_data.MODEL_PATH
     network_data.checkpoint_path = project_data.CHECKPOINT_PATH
     network_data.tensorboard_path = project_data.TENSORBOARD_PATH

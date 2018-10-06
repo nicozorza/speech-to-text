@@ -2,7 +2,7 @@ from typing import List
 from tensorflow.python.training.optimizer import Optimizer
 
 
-class NetworkData:
+class ZorzNetData:
     def __init__(self):
 
         self.checkpoint_path: str = None
