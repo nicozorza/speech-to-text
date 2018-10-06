@@ -1,8 +1,4 @@
 import os
-import queue
-import shutil
-import time
-from threading import Thread
 
 import tensorflow as tf
 import numpy as np
@@ -21,8 +17,8 @@ from smac.utils.io.traj_logging import TrajLogger
 from tensorflow.contrib.layers import l2_regularizer
 
 from src.neural_network.data_conversion import indexToStr
-from src.neural_network.NetworkData import NetworkData
-from src.neural_network.ZorzNet import ZorzNet
+from src.neural_network.ZorzNet.NetworkData import NetworkData
+from src.neural_network.ZorzNet.ZorzNet import ZorzNet
 from src.utils.Database import Database
 from src.utils.ProjectData import ProjectData
 from src.utils.smac_utils import wait_for_user_input_non_block, remove_if_exist
