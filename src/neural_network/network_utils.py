@@ -117,8 +117,9 @@ def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_fw_cell_units: 
 
 
 # TODO Add dropout and batch normalization
-def encoder_layer(input_ph, seq_len: int, activation_list, bw_cells: List[int], fw_cells: List[int] = None,
-                  name: str = "encoder", feature_sizes: List[int] = None, out_size: int = None, out_activation=None):
+def recurrent_encoder_layer(input_ph, seq_len: int, activation_list, bw_cells: List[int], fw_cells: List[int] = None,
+                            name: str = "encoder", feature_sizes: List[int] = None, out_size: int = None,
+                            out_activation=None):
 
     if fw_cells is None:
         input_ph = unidirectional_rnn(input_ph=input_ph, seq_len_ph=seq_len, num_layers=len(bw_cells),
@@ -140,10 +141,11 @@ def encoder_layer(input_ph, seq_len: int, activation_list, bw_cells: List[int], 
 
 
 # TODO Add dropout and batch normalization
-def decoder_layer(input_ph, seq_len: int, activation_list, bw_cells: List[int], fw_cells: List[int] = None,
-                  name: str = "decoder", feature_sizes: List[int] = None, out_size: int = None, out_activation=None):
+def recurrent_decoder_layer(input_ph, seq_len: int, activation_list, bw_cells: List[int], fw_cells: List[int] = None,
+                            name: str = "decoder", feature_sizes: List[int] = None, out_size: int = None,
+                            out_activation=None):
 
-    return encoder_layer(
+    return recurrent_encoder_layer(
         input_ph, seq_len, activation_list, bw_cells, fw_cells,
         name, feature_sizes, out_size, out_activation
     )
