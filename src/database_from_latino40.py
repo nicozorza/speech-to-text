@@ -18,9 +18,6 @@ feature_config.num_ceps = 26
 # Load project data
 project_data = ProjectData()
 
-database = Database(project_data)
-
-
 transcription_file_list = ['promptsl40.train', 'promptsl40.test']
 is_train_flag = False
 
@@ -31,6 +28,8 @@ for file in transcription_file_list:
     else:
         print('Loading TEST database')
         is_train_flag = False
+
+    database = Database(project_data)
 
     # Create a list of all labels
     transcription_list = []
