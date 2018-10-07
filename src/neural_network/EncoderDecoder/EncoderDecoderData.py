@@ -14,6 +14,7 @@ class EncoderDecoderData:
         self.encoder_activation = None
         self.encoder_regularizer: float = None
         self.encoder_output_sizes: List[int] = None
+        self.encoder_out_activation = None
 
         self.num_decoder_layers: int = None
         self.num_decoder_bw_units: List[int] = list()
@@ -21,6 +22,7 @@ class EncoderDecoderData:
         self.decoder_activation = None
         self.decoder_regularizer: float = None
         self.decoder_output_sizes: List[int] = None
+        self.decoder_out_activation = None
 
         self.input_features: int = None
         self.encoding_features: int = None

@@ -51,6 +51,9 @@ def unidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_cell_units: Li
     if output_size is None:
         output_size = [None] * num_layers
 
+    if activation_list is None:
+        activation_list = [None] * num_layers
+
     rnn_cell = [tf.nn.rnn_cell.LSTMCell(num_units=num_cell_units[_],
                                         state_is_tuple=True,
                                         name=name + '_{}'.format(_),
@@ -72,7 +75,7 @@ def unidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_cell_units: Li
 
 
 def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_fw_cell_units: List[int], num_bw_cell_units: List[int],
-                      name: str, activation_fw_list, activation_bw_list, output_size: List[int] = None,
+                      name: str, activation_list, output_size: List[int] = None,
                       use_tensorboard: bool = True, tensorboard_scope: str = None):
 
     if output_size is None:
@@ -80,18 +83,21 @@ def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_fw_cell_units: 
     else:
         output_size = [int(o/2) for o in output_size]   # BRNN stacks features
 
+    if activation_list is None:
+        activation_list = [None] * num_layers
+
     # Forward direction cell:
     lstm_fw_cell = [tf.nn.rnn_cell.LSTMCell(num_units=num_fw_cell_units[_],
                                             state_is_tuple=True,
                                             name=name+'_fw_{}'.format(_),
-                                            activation=activation_fw_list[_],
+                                            activation=activation_list[_],
                                             num_proj=output_size[_]
                                             ) for _ in range(num_layers)]
     # Backward direction cell:
     lstm_bw_cell = [tf.nn.rnn_cell.LSTMCell(num_units=num_bw_cell_units[_],
                                             state_is_tuple=True,
                                             name=name+'_bw_{}'.format(_),
-                                            activation=activation_bw_list[_],
+                                            activation=activation_list[_],
                                             num_proj=output_size[_]
                                             ) for _ in range(num_layers)]
 
@@ -111,57 +117,33 @@ def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_fw_cell_units: 
 
 
 # TODO Add dropout and batch normalization
-def encoder_layer(input_ph, seq_len: int, activation, bw_cells: List[int], fw_cells: List[int] = None,
-                  name: str = "encoder", feature_sizes: List[int] = None, out_size: int = None):
+def encoder_layer(input_ph, seq_len: int, activation_list, bw_cells: List[int], fw_cells: List[int] = None,
+                  name: str = "encoder", feature_sizes: List[int] = None, out_size: int = None, out_activation=None):
 
     if fw_cells is None:
-        input_ph = unidirectional_rnn(
-            input_ph=input_ph,
-            seq_len_ph=seq_len,
-            num_layers=len(bw_cells),
-            num_cell_units=bw_cells,
-            name=name,
-            activation_list=[activation]*len(bw_cells),
-            use_tensorboard=True,
-            tensorboard_scope=name,
-            output_size=feature_sizes
+        input_ph = unidirectional_rnn(input_ph=input_ph, seq_len_ph=seq_len, num_layers=len(bw_cells),
+                                      num_cell_units=bw_cells, name=name, activation_list=activation_list,
+                                      use_tensorboard=True, tensorboard_scope=name, output_size=feature_sizes
         )
     else:
-        input_ph = bidirectional_rnn(
-            input_ph=input_ph,
-            seq_len_ph=seq_len,
-            num_layers=len(bw_cells),
-            num_fw_cell_units=fw_cells,
-            num_bw_cell_units=bw_cells,
-            name=name,
-            activation_fw_list=[activation]*len(bw_cells),
-            activation_bw_list=[activation]*len(bw_cells),
-            use_tensorboard=True,
-            tensorboard_scope=name,
-            output_size=feature_sizes
-        )
+        input_ph = bidirectional_rnn(input_ph=input_ph, seq_len_ph=seq_len, num_layers=len(bw_cells),
+                                     num_fw_cell_units=fw_cells, num_bw_cell_units=bw_cells, name=name,
+                                     activation_list=activation_list, use_tensorboard=True, tensorboard_scope=name,
+                                     output_size=feature_sizes)
 
     if out_size is not None:
-        input_ph = dense_layer(
-            input_ph,
-            num_units=out_size,
-            name=name+'_out',
-            activation=activation,
-            use_batch_normalization=False,
-            train_ph=True,
-            use_tensorboard=True,
-            keep_prob=1,
-            tensorboard_scope=name
-        )
+        input_ph = dense_layer(input_ph, num_units=out_size, name=name+'_out', activation=out_activation,
+                               use_batch_normalization=False, train_ph=True, use_tensorboard=True, keep_prob=1,
+                               tensorboard_scope=name)
 
     return input_ph
 
 
 # TODO Add dropout and batch normalization
-def decoder_layer(input_ph, seq_len: int, activation, bw_cells: List[int], fw_cells: List[int] = None,
-                  name: str = "decoder", feature_sizes: List[int] = None, out_size: int = None):
+def decoder_layer(input_ph, seq_len: int, activation_list, bw_cells: List[int], fw_cells: List[int] = None,
+                  name: str = "decoder", feature_sizes: List[int] = None, out_size: int = None, out_activation=None):
 
     return encoder_layer(
-        input_ph, seq_len, activation, bw_cells, fw_cells,
-        name, feature_sizes, out_size
+        input_ph, seq_len, activation_list, bw_cells, fw_cells,
+        name, feature_sizes, out_size, out_activation
     )

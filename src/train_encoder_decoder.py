@@ -21,16 +21,18 @@ network_data.input_features = 26
 network_data.num_encoder_layers = 3
 network_data.num_encoder_bw_units = [256, 128, 64]
 network_data.num_encoder_fw_units = [256, 128, 64]
-network_data.encoder_activation = None
+network_data.encoder_activation = [tf.nn.tanh] * 3
 network_data.encoder_regularizer = 0.2
 network_data.encoder_output_sizes = [50, 40, 30]
+network_data.encoder_out_activation = None
 
 network_data.num_decoder_layers = 3
 network_data.num_decoder_bw_units = [64, 128, 256]
 network_data.num_decoder_fw_units = [64, 128, 256]
-network_data.decoder_activation = None
+network_data.decoder_activation = [tf.nn.tanh] * 3
 network_data.decoder_regularizer = 0.2
 network_data.decoder_output_sizes = [30, 40, 50]
+network_data.decoder_out_activation = None
 
 network_data.encoding_features = 13
 
