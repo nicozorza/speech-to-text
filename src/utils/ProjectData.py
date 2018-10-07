@@ -24,3 +24,10 @@ class ProjectData:
         self.ENC_DEC_CHECKPOINT_PATH = self.OUT_DIR + '/enc_dec/' + 'checkpoint/'
         self.ENC_DEC_MODEL_PATH = self.OUT_DIR + '/enc_dec/' + 'model/model'
         self.ENC_DEC_TENSORBOARD_PATH = self.OUT_DIR + '/enc_dec/' + 'tensorboard/'
+
+        self.TRAIN_ENCODER_DATABASE_NAME = 'encoder_train_database.db'
+        self.VAL_ENCODER_DATABASE_NAME = 'encoder_validation_database.db'
+        self.TEST_ENCODER_DATABASE_NAME = 'encoder_test_database.db'
+        self.TRAIN_ENCODER_DATABASE_FILE = self.DATABASE_DIR + '/' + self.TRAIN_ENCODER_DATABASE_NAME
+        self.VAL_ENCODER_DATABASE_FILE = self.DATABASE_DIR + '/' + self.VAL_ENCODER_DATABASE_NAME
+        self.TEST_ENCODER_DATABASE_FILE = self.DATABASE_DIR + '/' + self.TEST_ENCODER_DATABASE_NAME

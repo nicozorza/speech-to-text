@@ -3,16 +3,16 @@ import random
 import time
 from tensorflow.python.framework import graph_io
 import tensorflow as tf
-from src.neural_network.EncoderDecoder import EncoderDecoderData
+from src.neural_network.RecurrentEncoderDecoder import RecurrentEncoderDecoderData
 from tensorflow.python.training.saver import Saver
 from src.neural_network.data_conversion import padSequences, sparseTupleFrom
-from src.neural_network.network_utils import encoder_layer, decoder_layer
+from src.neural_network.network_utils import recurrent_encoder_layer, recurrent_decoder_layer
 import numpy as np
 
 
 # TODO Add dropout and batch normalization
-class EncoderDecoder:
-    def __init__(self, network_data: EncoderDecoderData):
+class RecurrentEncoderDecoder:
+    def __init__(self, network_data: RecurrentEncoderDecoderData):
         self.graph: tf.Graph = tf.Graph()
         self.network_data = network_data
 
@@ -50,7 +50,7 @@ class EncoderDecoder:
                     name="output_sequence")
 
             with tf.name_scope("encoder"):
-                self.encoder_out = encoder_layer(
+                self.encoder_out = recurrent_encoder_layer(
                     input_ph=self.input_seq,
                     seq_len=self.seq_len,
                     activation_list=self.network_data.encoder_activation,
@@ -63,7 +63,7 @@ class EncoderDecoder:
                 )
 
             with tf.name_scope("decoder"):
-                self.decoder_out = decoder_layer(
+                self.decoder_out = recurrent_decoder_layer(
                     input_ph=self.encoder_out,
                     seq_len=self.seq_len,
                     activation_list=self.network_data.decoder_activation,

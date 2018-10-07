@@ -2,7 +2,7 @@ from typing import List
 from tensorflow.python.training.optimizer import Optimizer
 
 
-class EncoderDecoderData:
+class RecurrentEncoderDecoderData:
     def __init__(self):
         self.checkpoint_path: str = None
         self.model_path: str = None

@@ -1,6 +1,6 @@
 import tensorflow as tf
-from src.neural_network.EncoderDecoder.EncoderDecoder import EncoderDecoder
-from src.neural_network.EncoderDecoder.EncoderDecoderData import EncoderDecoderData
+from src.neural_network.RecurrentEncoderDecoder.RecurrentEncoderDecoder import RecurrentEncoderDecoder
+from src.neural_network.RecurrentEncoderDecoder.RecurrentEncoderDecoderData import RecurrentEncoderDecoderData
 from src.utils.Database import Database
 from src.utils.ProjectData import ProjectData
 import matplotlib.pyplot as plt
@@ -11,46 +11,46 @@ import matplotlib.pyplot as plt
 
 project_data = ProjectData()
 
-network_data = EncoderDecoderData()
+network_data = RecurrentEncoderDecoderData()
 network_data.model_path = project_data.ENC_DEC_MODEL_PATH
 network_data.checkpoint_path = project_data.ENC_DEC_CHECKPOINT_PATH
 network_data.tensorboard_path = project_data.ENC_DEC_TENSORBOARD_PATH
 
-network_data.input_features = 26
+network_data.input_features = 513
 
-network_data.num_encoder_layers = 3
-network_data.num_encoder_bw_units = [256, 128, 64]
-network_data.num_encoder_fw_units = [256, 128, 64]
-network_data.encoder_activation = [tf.nn.tanh] * 3
+network_data.num_encoder_layers = 2
+network_data.num_encoder_bw_units = [128, 64]
+network_data.num_encoder_fw_units = [128, 64]
+network_data.encoder_activation = None#[tf.nn.tanh] * 2
 network_data.encoder_regularizer = 0.2
-network_data.encoder_output_sizes = [50, 40, 30]
+network_data.encoder_output_sizes = [200, 80]
 network_data.encoder_out_activation = None
 
-network_data.num_decoder_layers = 3
-network_data.num_decoder_bw_units = [64, 128, 256]
-network_data.num_decoder_fw_units = [64, 128, 256]
-network_data.decoder_activation = [tf.nn.tanh] * 3
+network_data.num_decoder_layers = 2
+network_data.num_decoder_bw_units = [128, 64]
+network_data.num_decoder_fw_units = [128, 64]
+network_data.decoder_activation = None#[tf.nn.tanh] * 2
 network_data.decoder_regularizer = 0.2
-network_data.decoder_output_sizes = [30, 40, 50]
+network_data.decoder_output_sizes = [80, 200]
 network_data.decoder_out_activation = None
 
-network_data.encoding_features = 13
+network_data.encoding_features = 40
 
 network_data.learning_rate = 0.001
-network_data.adam_epsilon = 0.001
+network_data.adam_epsilon = 0.01
 
 network_data.optimizer = tf.train.AdamOptimizer(learning_rate=network_data.learning_rate,
                                                 epsilon=network_data.adam_epsilon)
 
 ###########################################################################################################
 
-encoder_decoder = EncoderDecoder(network_data)
+encoder_decoder = RecurrentEncoderDecoder(network_data)
 
 encoder_decoder.create_graph()
 
-test_database = Database.fromFile(project_data.TEST_DATABASE_FILE, project_data)
+test_database = Database.fromFile(project_data.TEST_ENCODER_DATABASE_FILE, project_data)
 test_feats, _ = test_database.to_set()
-test_feats = test_feats[:10]
+test_feats = test_feats[0:100]
 
 encoder_decoder.train(
     input_seq=test_feats,
@@ -60,8 +60,8 @@ encoder_decoder.train(
     save_freq=10,
     use_tensorboard=True,
     tensorboard_freq=5,
-    training_epochs=30,
-    batch_size=4
+    training_epochs=5,
+    batch_size=20
 )
 
 out = encoder_decoder.predict(test_feats[0])
@@ -69,4 +69,11 @@ f1 = plt.figure(0)
 plt.imshow(out, cmap='hot', interpolation='nearest')
 f2 = plt.figure(1)
 plt.imshow(test_feats[0], cmap='hot', interpolation='nearest')
+
+out = encoder_decoder.predict(test_feats[1])
+f3 = plt.figure(2)
+plt.imshow(out, cmap='hot', interpolation='nearest')
+f4 = plt.figure(3)
+plt.imshow(test_feats[1], cmap='hot', interpolation='nearest')
+
 plt.show()
