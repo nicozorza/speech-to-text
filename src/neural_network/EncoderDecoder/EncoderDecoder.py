@@ -53,24 +53,26 @@ class EncoderDecoder:
                 self.encoder_out = encoder_layer(
                     input_ph=self.input_seq,
                     seq_len=self.seq_len,
-                    activation=self.network_data.encoder_activation,
+                    activation_list=self.network_data.encoder_activation,
                     bw_cells=self.network_data.num_encoder_bw_units,
                     fw_cells=self.network_data.num_encoder_fw_units,
                     name="encoder",
                     feature_sizes=self.network_data.encoder_output_sizes,
-                    out_size=self.network_data.encoding_features
+                    out_size=self.network_data.encoding_features,
+                    out_activation=self.network_data.encoder_out_activation
                 )
 
             with tf.name_scope("decoder"):
                 self.decoder_out = decoder_layer(
                     input_ph=self.encoder_out,
                     seq_len=self.seq_len,
-                    activation=self.network_data.decoder_activation,
+                    activation_list=self.network_data.decoder_activation,
                     bw_cells=self.network_data.num_decoder_bw_units,
                     fw_cells=self.network_data.num_decoder_fw_units,
                     name="decoder",
                     feature_sizes=self.network_data.decoder_output_sizes,
-                    out_size=self.network_data.input_features
+                    out_size=self.network_data.input_features,
+                    out_activation=self.network_data.decoder_out_activation
                 )
 
             with tf.name_scope("loss"):
