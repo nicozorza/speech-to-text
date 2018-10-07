@@ -77,6 +77,8 @@ def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_fw_cell_units: 
 
     if output_size is None:
         output_size = [None] * num_layers
+    else:
+        output_size = [int(o/2) for o in output_size]   # BRNN stacks features
 
     # Forward direction cell:
     lstm_fw_cell = [tf.nn.rnn_cell.LSTMCell(num_units=num_fw_cell_units[_],
@@ -106,3 +108,60 @@ def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_fw_cell_units: 
         tf.summary.histogram(tensorboard_scope, input_ph)
 
     return input_ph
+
+
+# TODO Add dropout and batch normalization
+def encoder_layer(input_ph, seq_len: int, activation, bw_cells: List[int], fw_cells: List[int] = None,
+                  name: str = "encoder", feature_sizes: List[int] = None, out_size: int = None):
+
+    if fw_cells is None:
+        input_ph = unidirectional_rnn(
+            input_ph=input_ph,
+            seq_len_ph=seq_len,
+            num_layers=len(bw_cells),
+            num_cell_units=bw_cells,
+            name=name,
+            activation_list=[activation]*len(bw_cells),
+            use_tensorboard=True,
+            tensorboard_scope=name,
+            output_size=feature_sizes
+        )
+    else:
+        input_ph = bidirectional_rnn(
+            input_ph=input_ph,
+            seq_len_ph=seq_len,
+            num_layers=len(bw_cells),
+            num_fw_cell_units=fw_cells,
+            num_bw_cell_units=bw_cells,
+            name=name,
+            activation_fw_list=[activation]*len(bw_cells),
+            activation_bw_list=[activation]*len(bw_cells),
+            use_tensorboard=True,
+            tensorboard_scope=name,
+            output_size=feature_sizes
+        )
+
+    if out_size is not None:
+        input_ph = dense_layer(
+            input_ph,
+            num_units=out_size,
+            name=name+'_out',
+            activation=activation,
+            use_batch_normalization=False,
+            train_ph=True,
+            use_tensorboard=True,
+            keep_prob=1,
+            tensorboard_scope=name
+        )
+
+    return input_ph
+
+
+# TODO Add dropout and batch normalization
+def decoder_layer(input_ph, seq_len: int, activation, bw_cells: List[int], fw_cells: List[int] = None,
+                  name: str = "decoder", feature_sizes: List[int] = None, out_size: int = None):
+
+    return encoder_layer(
+        input_ph, seq_len, activation, bw_cells, fw_cells,
+        name, feature_sizes, out_size
+    )
