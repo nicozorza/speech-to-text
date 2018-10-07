@@ -45,7 +45,7 @@ class RecurrentEncoderDecoder:
 
             with tf.name_scope("output_seq"):
                 self.output_seq = tf.placeholder(
-                    dtype=tf.int32,
+                    dtype=tf.float32,
                     shape=[None, None, self.network_data.input_features],
                     name="output_sequence")
 
