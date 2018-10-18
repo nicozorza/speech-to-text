@@ -2,7 +2,7 @@ import tensorflow as tf
 from typing import List
 
 
-def dense_layer(input_ph, num_units: int, name: str, activation=tf.nn.tanh,
+def dense_layer(input_ph, num_units: int, name: str, activation=None,
                 use_batch_normalization: bool = True, train_ph: bool = True,
                 use_tensorboard: bool = True, keep_prob: float = 0,
                 tensorboard_scope: str = None):
@@ -33,6 +33,10 @@ def dense_multilayer(input_ph, num_layers: int, num_units: List[int], name: str,
                      use_batch_normalization: bool = True, train_ph: bool = True,
                      use_tensorboard: bool = True, keep_prob_list: List[float] = 0,
                      tensorboard_scope: str = None):
+
+    if activation_list is None:
+        activation_list = [None] * num_layers
+
     for _ in range(num_layers):
         input_ph = dense_layer(input_ph=input_ph,
                                num_units=num_units[_],
@@ -149,3 +153,19 @@ def recurrent_decoder_layer(input_ph, seq_len: int, activation_list, bw_cells: L
         input_ph, seq_len, activation_list, bw_cells, fw_cells,
         name, feature_sizes, out_size, out_activation
     )
+
+
+def encoder_layer(input_ph, num_layers: int, num_units: List[int], activation_list, name: str = 'encoder',
+                  use_batch_normalization: bool = True, train_ph: bool = True, use_tensorboard: bool = True,
+                  keep_prob_list: List[float] = 0, tensorboard_scope: str = None):
+
+    return dense_multilayer(input_ph, num_layers, num_units, name, activation_list, use_batch_normalization, train_ph,
+                            use_tensorboard, keep_prob_list, tensorboard_scope)
+
+
+def decoder_layer(input_ph, num_layers: int, num_units: List[int], activation_list, name: str = 'decoder',
+                  use_batch_normalization: bool = True, train_ph: bool = True, use_tensorboard: bool = True,
+                  keep_prob_list: List[float] = 0, tensorboard_scope: str = None):
+
+    return dense_multilayer(input_ph, num_layers, num_units, name, activation_list, use_batch_normalization, train_ph,
+                            use_tensorboard, keep_prob_list, tensorboard_scope)
