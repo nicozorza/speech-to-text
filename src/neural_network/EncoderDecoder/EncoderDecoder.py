@@ -21,6 +21,7 @@ class EncoderDecoder:
         self.decoder_out = None
         self.reconstructed_out = None
 
+        self.reconstruction_loss = None
         self.loss = None
         self.optimizer: tf.Operation = None
         self.checkpoint_saver: Saver = None
@@ -75,7 +76,7 @@ class EncoderDecoder:
 
             with tf.name_scope('reconstructed'):
                 self.reconstructed_out = dense_layer(
-                    self.decoder_out, self.network_data.input_features, "reconstrution",
+                    self.decoder_out, self.network_data.input_features, "reconstruction",
                     self.network_data.reconstruction_activation, False, True, True, 1, 'reconstructed')
 
             with tf.name_scope("loss"):
@@ -89,10 +90,10 @@ class EncoderDecoder:
                     if var.name.startswith('decoder') and 'kernel' in var.name:
                         decoder_loss += tf.nn.l2_loss(var)
 
-                reconstruction_loss = tf.reduce_mean(
-                    tf.reduce_sum(tf.square(tf.subtract(self.input_feature, self.reconstructed_out)), axis=1))
+                self.reconstruction_loss = tf.reduce_mean(
+                    tf.reduce_sum(tf.square(tf.subtract(self.output_feature, self.reconstructed_out)), axis=1))
 
-                self.loss = reconstruction_loss \
+                self.loss = self.reconstruction_loss \
                             + self.network_data.encoder_regularizer * encoder_loss \
                             + self.network_data.decoder_regularizer * decoder_loss
                 tf.summary.scalar('loss', self.loss)
@@ -239,6 +240,42 @@ class EncoderDecoder:
             sess.close()
 
             return loss_ep
+
+    def validate(self, input_seq, output_seq, show_partial: bool=True, batch_size: int = 1):
+        with self.graph.as_default():
+            sess = tf.Session(graph=self.graph)
+            sess.run(tf.global_variables_initializer())
+            self.load_checkpoint(sess)
+
+            acum_err = 0
+            acum_loss = 0
+            n_step = 0
+            database = list(zip(input_seq, output_seq))
+            batch_list = self.create_batch(database, batch_size)
+            for batch in batch_list:
+                in_seq, out_seq = zip(*batch)
+                # Padding input to max_time_step of this batch
+                batch_in_seq, batch_seq_len = padSequences(in_seq)
+                batch_out_seq, _ = padSequences(out_seq)
+
+                feed_dict = {
+                    self.input_feature: batch_in_seq,
+                    # self.seq_len: batch_seq_len,
+                    self.output_feature: batch_out_seq,
+                    self.tf_is_traing_pl: False
+                }
+                error, loss = sess.run([self.reconstruction_loss, self.loss], feed_dict=feed_dict)
+
+                if show_partial:
+                    print("Batch %d of %d, error %f" % (n_step+1, len(batch_list), error))
+                acum_err += error
+                acum_loss += loss
+                n_step += 1
+            print("Validation error: %f, loss: %f" % (acum_err/n_step, acum_loss/n_step))
+
+            sess.close()
+
+            return acum_err/len(input_seq), acum_loss/len(input_seq)
 
     def predict(self, feature):
         with tf.Session(graph=self.graph) as sess:
