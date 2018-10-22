@@ -7,7 +7,7 @@ from src.utils.ProjectData import ProjectData
 
 # Configuration of the features
 feature_config = FeatureConfig()
-feature_config.feature_type = 'spec'
+feature_config.feature_type = 'log_spec'
 feature_config.nfft = 1024
 feature_config.winlen = 20
 feature_config.winstride = 10
