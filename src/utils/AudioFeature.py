@@ -7,7 +7,7 @@ from typing import Tuple
 
 class FeatureConfig:
     def __init__(self):
-        self.feature_type: str = 'mfcc'     # 'spec'
+        self.feature_type: str = 'mfcc'     # 'spec', 'log_spec'
         self.nfft: int = 1024
         self.winlen: int = 20
         self.winstride: int = 10
@@ -42,9 +42,7 @@ class AudioFeature:
         return features.mfcc(audio, samplerate=fs, winlen=winlen, winstep=winstep, numcep=numcep,
                              nfilt=nfilt, nfft=nfft, lowfreq=lowfreq, highfreq=highfreq, preemph=preemph)
 
-    def log_specgram(self, audio, fs, nfft=1024, window_size=20,
-                     step_size=10, eps=1e-10) -> Tuple[np.ndarray, np.ndarray, None]:
-
+    def specgram(self, audio, fs, nfft=1024, window_size=20, step_size=10, eps=1e-10):
         nperseg = int(round(window_size * fs / 1e3))
         noverlap = int(round(step_size * fs / 1e3))
         freqs, times, spec = signal.spectrogram(audio,
@@ -54,7 +52,14 @@ class AudioFeature:
                                                 noverlap=noverlap,
                                                 detrend=False,
                                                 nfft=nfft)
-        return freqs, times, np.log(spec.T.astype(np.float32) + eps)
+        return freqs, times, spec.T.astype(np.float32)
+
+    def log_specgram(self, audio, fs, nfft=1024, window_size=20,
+                     step_size=10, eps=1e-10) -> Tuple[np.ndarray, np.ndarray, None]:
+
+        freqs, times, spec = self.specgram(audio, fs, nfft, window_size, step_size, eps)
+
+        return freqs, times, np.log(spec + eps)
 
     @staticmethod
     def fromFile(wav_name: str,
@@ -80,13 +85,19 @@ class AudioFeature:
         feature = AudioFeature()
         feature.__fs = fs
         if feature_config.feature_type is 'spec':
+            _, _, feature.__feature = feature.specgram(
+                audio=audio,
+                fs=fs,
+                nfft=feature_config.nfft,
+                window_size=feature_config.winlen,
+                step_size=feature_config.winstride)
+        elif feature_config.feature_type is 'log_spec':
             _, _, feature.__feature = feature.log_specgram(
                 audio=audio,
                 fs=fs,
                 nfft=feature_config.nfft,
                 window_size=feature_config.winlen,
                 step_size=feature_config.winstride)
-
         elif feature_config.feature_type is 'mfcc':
             if feature_config.highfreq is None:
                 feature_config.highfreq = fs/2
