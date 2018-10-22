@@ -86,7 +86,8 @@ class RecurrentEncoderDecoder:
                     if var.name.startswith('decoder') and 'kernel' in var.name:
                         decoder_loss += tf.nn.l2_loss(var)
 
-                reconstruction_loss = tf.reduce_mean(tf.reduce_sum(tf.square(tf.subtract(self.input_seq, self.decoder_out)), axis=1))
+                reconstruction_loss = tf.reduce_mean(
+                    tf.reduce_sum(tf.square(tf.subtract(self.output_seq, self.decoder_out)), axis=1))
 
                 self.loss = reconstruction_loss \
                             + self.network_data.encoder_regularizer * encoder_loss \
