@@ -79,7 +79,7 @@ def unidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_cell_units: Li
 
 
 def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_fw_cell_units: List[int], num_bw_cell_units: List[int],
-                      name: str, activation_list, output_size: List[int] = None,
+                      name: str, activation_fw_list, activation_bw_list, output_size: List[int] = None,
                       use_tensorboard: bool = True, tensorboard_scope: str = None):
 
     if output_size is None:
@@ -87,21 +87,23 @@ def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_fw_cell_units: 
     else:
         output_size = [int(o/2) for o in output_size]   # BRNN stacks features
 
-    if activation_list is None:
-        activation_list = [None] * num_layers
+    if activation_fw_list is None:
+        activation_fw_list = [None] * num_layers
+    if activation_bw_list is None:
+        activation_bw_list = [None] * num_layers
 
     # Forward direction cell:
     lstm_fw_cell = [tf.nn.rnn_cell.LSTMCell(num_units=num_fw_cell_units[_],
                                             state_is_tuple=True,
                                             name=name+'_fw_{}'.format(_),
-                                            activation=activation_list[_],
+                                            activation=activation_fw_list[_],
                                             num_proj=output_size[_]
                                             ) for _ in range(num_layers)]
     # Backward direction cell:
     lstm_bw_cell = [tf.nn.rnn_cell.LSTMCell(num_units=num_bw_cell_units[_],
                                             state_is_tuple=True,
                                             name=name+'_bw_{}'.format(_),
-                                            activation=activation_list[_],
+                                            activation=activation_bw_list[_],
                                             num_proj=output_size[_]
                                             ) for _ in range(num_layers)]
 
@@ -133,7 +135,8 @@ def recurrent_encoder_layer(input_ph, seq_len: int, activation_list, bw_cells: L
     else:
         input_ph = bidirectional_rnn(input_ph=input_ph, seq_len_ph=seq_len, num_layers=len(bw_cells),
                                      num_fw_cell_units=fw_cells, num_bw_cell_units=bw_cells, name=name,
-                                     activation_list=activation_list, use_tensorboard=True, tensorboard_scope=name,
+                                     activation_fw_list=activation_list, activation_bw_list=activation_list,
+                                     use_tensorboard=True, tensorboard_scope=name,
                                      output_size=feature_sizes)
 
     if out_size is not None:
