@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 project_data = ProjectData()
 
 network_data = RecurrentEncoderDecoderData()
-network_data.model_path = project_data.ENC_DEC_MODEL_PATH
-network_data.checkpoint_path = project_data.ENC_DEC_CHECKPOINT_PATH
-network_data.tensorboard_path = project_data.ENC_DEC_TENSORBOARD_PATH
+network_data.model_path = project_data.REC_ENC_DEC_MODEL_PATH
+network_data.checkpoint_path = project_data.REC_ENC_DEC_CHECKPOINT_PATH
+network_data.tensorboard_path = project_data.REC_ENC_DEC_TENSORBOARD_PATH
 
 network_data.input_features = 513
 
