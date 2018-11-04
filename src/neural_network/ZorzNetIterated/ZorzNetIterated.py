@@ -18,21 +18,31 @@ class ZorzNetIterated:
         self.seq_len = None
         self.input_feature = None
         self.input_label = None
-        self.rnn_cell = None
-        self.multi_rrn_cell = None
-        self.rnn_input = None
-        self.rnn_outputs = None
-        self.dense_output_no_activation = None
-        self.dense_output = None
+
+        self.dense_layer_1 = None
+        self.rnn_outputs_1 = None
+        self.dense_layer_2 = None
+        self.dense_output_no_activation_1 = None
+        self.dense_output_1 = None
+        self.output_time_major_1 = None
+        self.decoded_1 = None
+        self.dense_decoded_1 = None
+
+        self.dense_layer_3 = None
+        self.rnn_outputs_2 = None
+        self.dense_layer_4 = None
+        self.dense_output_no_activation_2 = None
+        self.dense_output_2 = None
+        self.output_time_major_2 = None
+        self.decoded_2 = None
+        self.dense_decoded_2 = None
+
         self.logits_loss = None
         self.loss = None
         self.training_op: tf.Operation = None
         self.checkpoint_saver: Saver = None
         self.merged_summary = None
 
-        self.output_time_major = None
-        self.decoded = None
-        self.dense_decoded = None
         self.ler = None
 
         self.tf_is_traing_pl = None
@@ -57,127 +67,169 @@ class ZorzNetIterated:
                     shape=[None, None],
                     name="input_label")
 
-            self.rnn_input = tf.identity(self.input_feature)
-            with tf.name_scope("input_dense"):
-                self.rnn_input = dense_multilayer(input_ph=self.rnn_input,
-                                                  num_layers=self.network_data.num_input_dense_layers,
-                                                  num_units=self.network_data.num_input_dense_units,
-                                                  name='input_dense_layer',
-                                                  activation_list=self.network_data.input_dense_activations,
-                                                  use_batch_normalization=self.network_data.input_batch_normalization,
-                                                  train_ph=self.tf_is_traing_pl,
-                                                  use_tensorboard=True,
-                                                  keep_prob_list=self.network_data.keep_dropout_input,
-                                                  tensorboard_scope='input_dense_layer')
+            self.dense_layer_1 = tf.identity(self.input_feature)
+            with tf.name_scope("dense_layer_1"):
+                self.dense_layer_1 = dense_multilayer(input_ph=self.dense_layer_1,
+                                                      num_layers=self.network_data.num_dense_layers_1,
+                                                      num_units=self.network_data.num_dense_units_1,
+                                                      name='dense_layer_1',
+                                                      activation_list=self.network_data.dense_activations_1,
+                                                      use_batch_normalization=self.network_data.batch_normalization_1,
+                                                      train_ph=self.tf_is_traing_pl,
+                                                      use_tensorboard=True,
+                                                      keep_prob_list=self.network_data.keep_dropout_1,
+                                                      tensorboard_scope='dense_layer_1')
 
-            with tf.name_scope("RNN_cell"):
-                if self.network_data.is_bidirectional:
-                    self.rnn_outputs = bidirectional_rnn(
-                        input_ph=self.rnn_input,
+            with tf.name_scope("RNN_1"):
+                if self.network_data.is_bidirectional_1:
+                    self.rnn_outputs_1 = bidirectional_rnn(
+                        input_ph=self.dense_layer_1,
                         seq_len_ph=self.seq_len,
-                        num_layers=len(self.network_data.num_fw_cell_units),
-                        num_fw_cell_units=self.network_data.num_fw_cell_units,
-                        num_bw_cell_units=self.network_data.num_bw_cell_units,
-                        name="RNN_cell",
-                        activation_fw_list=self.network_data.cell_fw_activation,
-                        activation_bw_list=self.network_data.cell_bw_activation,
+                        num_layers=len(self.network_data.num_fw_cell_units_1),
+                        num_fw_cell_units=self.network_data.num_fw_cell_units_1,
+                        num_bw_cell_units=self.network_data.num_bw_cell_units_1,
+                        name="RNN_1",
+                        activation_fw_list=self.network_data.cell_fw_activation_1,
+                        activation_bw_list=self.network_data.cell_bw_activation_1,
                         use_tensorboard=True,
-                        tensorboard_scope='RNN',
-                        output_size=self.network_data.rnn_output_sizes)
+                        tensorboard_scope='RNN_1',
+                        output_size=self.network_data.rnn_output_sizes_1)
 
                 else:
-                    self.rnn_outputs = unidirectional_rnn(
-                        input_ph=self.rnn_input,
+                    self.rnn_outputs_1 = unidirectional_rnn(
+                        input_ph=self.dense_layer_1,
                         seq_len_ph=self.seq_len,
-                        num_layers=len(self.network_data.num_cell_units),
-                        num_cell_units=self.network_data.num_cell_units,
-                        name="RNN_cell",
-                        activation_list=self.network_data.cell_activation,
+                        num_layers=len(self.network_data.num_cell_units_1),
+                        num_cell_units=self.network_data.num_cell_units_1,
+                        name="RNN_1",
+                        activation_list=self.network_data.cell_activation_1,
                         use_tensorboard=True,
-                        tensorboard_scope='RNN',
-                        output_size=self.network_data.rnn_output_sizes)
+                        tensorboard_scope='RNN_1',
+                        output_size=self.network_data.rnn_output_sizes_1)
 
-            with tf.name_scope("dense_layers"):
-                self.rnn_outputs = dense_multilayer(input_ph=self.rnn_outputs,
-                                                    num_layers=self.network_data.num_dense_layers,
-                                                    num_units=self.network_data.num_dense_units,
-                                                    name='dense_layer',
-                                                    activation_list=self.network_data.dense_activations,
-                                                    use_batch_normalization=self.network_data.dense_batch_normalization,
-                                                    train_ph=self.tf_is_traing_pl,
-                                                    use_tensorboard=True,
-                                                    keep_prob_list=self.network_data.keep_dropout_output,
-                                                    tensorboard_scope='dense_layer')
-
-            with tf.name_scope("dense_output"):
-                self.dense_output_no_activation = dense_layer(input_ph=self.rnn_outputs,
-                                                              num_units=self.network_data.num_classes,
-                                                              name='dense_output_no_activation',
-                                                              activation=None,
-                                                              use_batch_normalization=False,
-                                                              train_ph=False,
-                                                              use_tensorboard=True,
-                                                              keep_prob=1,
-                                                              tensorboard_scope='dense_output')
-
-                self.dense_output = tf.nn.softmax(self.dense_output_no_activation, name='dense_output')
-                tf.summary.histogram('dense_output', self.dense_output)
-
-            with tf.name_scope("decoder"):
-                self.output_time_major = tf.transpose(self.dense_output, (1, 0, 2))
-                self.decoded, log_prob = self.network_data.decoder_function(self.output_time_major, self.seq_len)
-                self.dense_decoded = tf.sparse_to_dense(self.decoded[0].indices,
-                                                        self.decoded[0].dense_shape,
-                                                        self.decoded[0].values)
-
-                self.dense_decoded_one_hot = tf.one_hot(self.dense_decoded, self.network_data.num_classes)
-                self.dense_decoded_shape = tf.expand_dims(tf.shape(self.dense_decoded_one_hot), 1)
-                self.dense_decoded_shape = tf.tile(self.dense_decoded_shape[1], self.dense_decoded_shape[0])
-
-            with tf.name_scope('rnn_iterated'):
-                self.rnn_iterated = bidirectional_rnn(
-                    input_ph=self.dense_decoded_one_hot,
-                    seq_len_ph=self.dense_decoded_shape,
-                    num_layers=1,
-                    num_fw_cell_units=[128],
-                    num_bw_cell_units=[128],
-                    name="RNN_cell_2",
-                    activation_fw_list=None,
-                    activation_bw_list=None,
-                    use_tensorboard=True,
-                    tensorboard_scope='RNN2',
-                    output_size=None)
-
-                self.rnn_shape = tf.shape(self.rnn_iterated)
-
-            with tf.name_scope("dense_layers_iterated"):
-                self.rnn_outputs_iter = dense_layer(input_ph=self.rnn_iterated,
-                                                      num_units=self.network_data.num_classes,
-                                                      name='dense_output_no_activation_iter',
-                                                      activation=None,
-                                                      use_batch_normalization=False,
-                                                      train_ph=False,
+            with tf.name_scope("dense_layer_2"):
+                self.dense_layer_2 = dense_multilayer(input_ph=self.rnn_outputs_1,
+                                                      num_layers=self.network_data.num_dense_layers_2,
+                                                      num_units=self.network_data.num_dense_units_2,
+                                                      name='dense_layer_2',
+                                                      activation_list=self.network_data.dense_activations_2,
+                                                      use_batch_normalization=self.network_data.batch_normalization_2,
+                                                      train_ph=self.tf_is_traing_pl,
                                                       use_tensorboard=True,
-                                                      keep_prob=1,
-                                                      tensorboard_scope='dense_output_iter')
+                                                      keep_prob_list=self.network_data.keep_dropout_2,
+                                                      tensorboard_scope='dense_layer_2')
 
-                self.loss2 = tf.nn.ctc_loss(self.input_label, self.rnn_outputs_iter, self.dense_decoded_shape, time_major=False, ignore_longer_outputs_than_inputs=True)
+            with tf.name_scope("dense_output_1"):
+                self.dense_output_no_activation_1 = dense_layer(input_ph=self.dense_layer_2,
+                                                                num_units=self.network_data.num_classes,
+                                                                name='dense_output_no_activation_1',
+                                                                activation=None,
+                                                                use_batch_normalization=False,
+                                                                train_ph=False,
+                                                                use_tensorboard=True,
+                                                                keep_prob=1,
+                                                                tensorboard_scope='dense_output_1')
+
+                self.dense_output_1 = tf.nn.softmax(self.dense_output_no_activation_1, name='dense_output_1')
+                tf.summary.histogram('dense_output_1', self.dense_output_1)
+
+            with tf.name_scope("decoder_1"):
+                self.output_time_major_1 = tf.transpose(self.dense_output_1, (1, 0, 2))
+                self.decoded_1, log_prob = self.network_data.decoder_function(self.output_time_major_1, self.seq_len)
+                self.dense_decoded_1 = tf.sparse_to_dense(self.decoded_1[0].indices,
+                                                          self.decoded_1[0].dense_shape,
+                                                          self.decoded_1[0].values)
+
+            with tf.name_scope("dense_layer_3"):
+                self.dense_layer_3 = dense_multilayer(input_ph=self.dense_output_1,
+                                                      num_layers=self.network_data.num_dense_layers_3,
+                                                      num_units=self.network_data.num_dense_units_3,
+                                                      name='dense_layer_3',
+                                                      activation_list=self.network_data.dense_activations_3,
+                                                      use_batch_normalization=self.network_data.batch_normalization_3,
+                                                      train_ph=self.tf_is_traing_pl,
+                                                      use_tensorboard=True,
+                                                      keep_prob_list=self.network_data.keep_dropout_3,
+                                                      tensorboard_scope='dense_layer_3')
+
+            with tf.name_scope("RNN_2"):
+                if self.network_data.is_bidirectional_2:
+                    self.rnn_outputs_2 = bidirectional_rnn(
+                        input_ph=self.dense_layer_3,
+                        seq_len_ph=self.seq_len,
+                        num_layers=len(self.network_data.num_fw_cell_units_2),
+                        num_fw_cell_units=self.network_data.num_fw_cell_units_2,
+                        num_bw_cell_units=self.network_data.num_bw_cell_units_2,
+                        name="RNN_2",
+                        activation_fw_list=self.network_data.cell_fw_activation_2,
+                        activation_bw_list=self.network_data.cell_bw_activation_2,
+                        use_tensorboard=True,
+                        tensorboard_scope='RNN_2',
+                        output_size=self.network_data.rnn_output_sizes_2)
+
+                else:
+                    self.rnn_outputs_2 = unidirectional_rnn(
+                        input_ph=self.dense_layer_3,
+                        seq_len_ph=self.seq_len,
+                        num_layers=len(self.network_data.num_cell_units_2),
+                        num_cell_units=self.network_data.num_cell_units_2,
+                        name="RNN_2",
+                        activation_list=self.network_data.cell_activation_2,
+                        use_tensorboard=True,
+                        tensorboard_scope='RNN_2',
+                        output_size=self.network_data.rnn_output_sizes_2)
+
+            with tf.name_scope("dense_layer_4"):
+                self.dense_layer_4 = dense_multilayer(input_ph=self.rnn_outputs_2,
+                                                      num_layers=self.network_data.num_dense_layers_4,
+                                                      num_units=self.network_data.num_dense_units_4,
+                                                      name='dense_layer_4',
+                                                      activation_list=self.network_data.dense_activations_4,
+                                                      use_batch_normalization=self.network_data.batch_normalization_4,
+                                                      train_ph=self.tf_is_traing_pl,
+                                                      use_tensorboard=True,
+                                                      keep_prob_list=self.network_data.keep_dropout_4,
+                                                      tensorboard_scope='dense_layer_4')
+
+            with tf.name_scope("dense_output_2"):
+                self.dense_output_no_activation_2 = dense_layer(input_ph=self.dense_layer_4,
+                                                                num_units=self.network_data.num_classes,
+                                                                name='dense_output_no_activation_2',
+                                                                activation=None,
+                                                                use_batch_normalization=False,
+                                                                train_ph=False,
+                                                                use_tensorboard=True,
+                                                                keep_prob=1,
+                                                                tensorboard_scope='dense_output_no_activation_2')
+
+                self.dense_output_2 = tf.nn.softmax(self.dense_output_no_activation_2, name='dense_output_2')
+                tf.summary.histogram('dense_output_2', self.dense_output_2)
+
+            with tf.name_scope("decoder_2"):
+                self.output_time_major_2 = tf.transpose(self.dense_output_2, (1, 0, 2))
+                self.decoded_2, log_prob = self.network_data.decoder_function(self.output_time_major_2, self.seq_len)
+                self.dense_decoded_2 = tf.sparse_to_dense(self.decoded_2[0].indices,
+                                                          self.decoded_2[0].dense_shape,
+                                                          self.decoded_2[0].values)
 
             with tf.name_scope("loss"):
                 rnn_loss = 0
                 for var in tf.trainable_variables():
-                    if var.name.startswith('RNN_cell') and 'kernel' in var.name:
+                    if var.name.startswith('RNN_') and 'kernel' in var.name:
                         rnn_loss += tf.nn.l2_loss(var)
 
                 dense_loss = 0
                 for var in tf.trainable_variables():
                     if var.name.startswith('dense_layer') or \
-                            var.name.startswith('input_dense_layer') and \
+                            var.name.startswith('dense_layer') and \
                             'kernel' in var.name:
                         dense_loss += tf.nn.l2_loss(var)
 
-                loss = self.loss2 + 0.1 * tf.nn.ctc_loss(self.input_label, self.dense_output_no_activation, self.seq_len, time_major=False)
-                self.logits_loss = tf.reduce_mean(tf.reduce_sum(loss))
+                loss_1 = tf.nn.ctc_loss(self.input_label, self.dense_output_no_activation_1, self.seq_len,
+                                        time_major=False)
+                loss_2 = tf.nn.ctc_loss(self.input_label, self.dense_output_no_activation_2, self.seq_len,
+                                        time_major=False)
+                self.logits_loss = tf.reduce_mean(tf.reduce_sum(loss_1)) + 0.3 * tf.reduce_mean(tf.reduce_sum(loss_2))
                 self.loss = self.logits_loss \
                             + self.network_data.rnn_regularizer * rnn_loss \
                             + self.network_data.dense_regularizer * dense_loss
@@ -189,7 +241,7 @@ class ZorzNetIterated:
 
             with tf.name_scope("label_error_rate"):
                 # Inaccuracy: label error rate
-                self.ler = tf.reduce_mean(tf.edit_distance(hypothesis=tf.cast(self.decoded[0], tf.int32),
+                self.ler = tf.reduce_mean(tf.edit_distance(hypothesis=tf.cast(self.decoded_2[0], tf.int32),
                                                            truth=self.input_label,
                                                            normalize=True))
                 tf.summary.scalar('label_error_rate', tf.reduce_mean(self.ler))
@@ -286,20 +338,6 @@ class ZorzNetIterated:
                         self.input_label: batch_train_labels
                     }
 
-                    # # loss = 0
-                    # # ler = 0
-                    # # seq = sess.run(self.seq_len, feed_dict)
-                    # dec2 = sess.run(self.rnn_shape, feed_dict)
-                    # print(dec2)
-                    # dec0 = sess.run(self.dense_decoded_shape, feed_dict)
-                    # print(dec0)
-                    dec = sess.run(self.dense_decoded, feed_dict)
-                    print(np.shape(dec))
-                    # # dec1 = sess.run(self.rnn_iterated, feed_dict)
-                    # # asd =1
-                    # # # print(dec)
-                    # # asd = sess.run(self.loss2, feed_dict)
-                    # # print(asd)
                     loss, _, ler = sess.run([self.loss, self.training_op, self.ler], feed_dict=feed_dict)
 
                     loss_ep += loss
@@ -407,7 +445,7 @@ class ZorzNetIterated:
                 self.tf_is_traing_pl: False
             }
 
-            predicted = sess.run(self.decoded, feed_dict=feed_dict)
+            predicted = sess.run(self.decoded_2, feed_dict=feed_dict)
 
             sess.close()
 
