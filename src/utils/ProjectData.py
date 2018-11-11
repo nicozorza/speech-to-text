@@ -17,19 +17,19 @@ class ProjectData:
 
         self.OUT_DIR = 'out'
 
-        self.ZORZNET_CHECKPOINT_PATH = self.OUT_DIR + '/zorznet/' + 'checkpoint/'
+        self.ZORZNET_CHECKPOINT_PATH = self.OUT_DIR + '/zorznet/' + 'checkpoint/model.ckpt'
         self.ZORZNET_MODEL_PATH = self.OUT_DIR + '/zorznet/' + 'model/model'
         self.ZORZNET_TENSORBOARD_PATH = self.OUT_DIR + '/zorznet/' + 'tensorboard/'
 
-        self.ZORZNET_ITERATED_CHECKPOINT_PATH = self.OUT_DIR + '/zorznet_iter/' + 'checkpoint/'
+        self.ZORZNET_ITERATED_CHECKPOINT_PATH = self.OUT_DIR + '/zorznet_iter/' + 'checkpoint/model.ckpt'
         self.ZORZNET_ITERATED_MODEL_PATH = self.OUT_DIR + '/zorznet_iter/' + 'model/model'
         self.ZORZNET_ITERATED_TENSORBOARD_PATH = self.OUT_DIR + '/zorznet_iter/' + 'tensorboard/'
 
-        self.ENC_DEC_CHECKPOINT_PATH = self.OUT_DIR + '/enc_dec/' + 'checkpoint/'
+        self.ENC_DEC_CHECKPOINT_PATH = self.OUT_DIR + '/enc_dec/' + 'checkpoint/model.ckpt'
         self.ENC_DEC_MODEL_PATH = self.OUT_DIR + '/enc_dec/' + 'model/model'
         self.ENC_DEC_TENSORBOARD_PATH = self.OUT_DIR + '/enc_dec/' + 'tensorboard/'
 
-        self.REC_ENC_DEC_CHECKPOINT_PATH = self.OUT_DIR + '/rec_enc_dec/' + 'checkpoint/'
+        self.REC_ENC_DEC_CHECKPOINT_PATH = self.OUT_DIR + '/rec_enc_dec/' + 'checkpoint/model.ckpt'
         self.REC_ENC_DEC_MODEL_PATH = self.OUT_DIR + '/rec_enc_dec/' + 'model/model'
         self.REC_ENC_DEC_TENSORBOARD_PATH = self.OUT_DIR + '/rec_enc_dec/' + 'tensorboard/'
 
