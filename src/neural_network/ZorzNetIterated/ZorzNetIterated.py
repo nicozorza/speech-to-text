@@ -229,7 +229,7 @@ class ZorzNetIterated:
                                         time_major=False)
                 loss_2 = tf.nn.ctc_loss(self.input_label, self.dense_output_no_activation_2, self.seq_len,
                                         time_major=False)
-                self.logits_loss = tf.reduce_mean(tf.reduce_sum(loss_1)) + 0.3 * tf.reduce_mean(tf.reduce_sum(loss_2))
+                self.logits_loss = tf.reduce_mean(tf.reduce_sum(loss_2)) + 0.3 * tf.reduce_mean(tf.reduce_sum(loss_1))
                 self.loss = self.logits_loss \
                             + self.network_data.rnn_regularizer * rnn_loss \
                             + self.network_data.dense_regularizer * dense_loss
