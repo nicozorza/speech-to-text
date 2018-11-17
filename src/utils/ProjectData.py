@@ -33,6 +33,10 @@ class ProjectData:
         self.REC_ENC_DEC_MODEL_PATH = self.OUT_DIR + '/rec_enc_dec/' + 'model/model'
         self.REC_ENC_DEC_TENSORBOARD_PATH = self.OUT_DIR + '/rec_enc_dec/' + 'tensorboard/'
 
+        self.ITERATED_CTC_CHECKPOINT_PATH = self.OUT_DIR + '/iterated_ctc/' + 'checkpoint/model.ckpt'
+        self.ITERATED_CTC_MODEL_PATH = self.OUT_DIR + '/iterated_ctc/' + 'model/model'
+        self.ITERATED_CTC_TENSORBOARD_PATH = self.OUT_DIR + '/iterated_ctc/' + 'tensorboard/'
+
         self.TRAIN_ENCODER_DATABASE_NAME = 'encoder_train_database.db'
         self.VAL_ENCODER_DATABASE_NAME = 'encoder_validation_database.db'
         self.TEST_ENCODER_DATABASE_NAME = 'encoder_test_database.db'
