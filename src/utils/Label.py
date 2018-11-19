@@ -7,12 +7,13 @@ class Label:
     SPACE_TOKEN = '<space>'
     SPACE_INDEX = 0
     ENIE_TOKEN = '<enie>'
-    ENIE_INDEX = ord('Z') - ord('A') + ord('z')-ord('a') + 1
+    ENIE_INDEX = ord('Z') - ord('A') + ord('z')-ord('a') + 1 + 1
     FIRST_INDEX = ord('A')
 
     def __init__(self, transcription: str):
         transcription = re.sub('[;:!@#$?.,_\'\"\-]', '', transcription)
 
+        transcription = transcription.lower()
         self.__text: str = transcription
         self.__targets = transcription.split(' ')
         self.__targets = [w.capitalize() for w in self.__targets]
@@ -20,10 +21,6 @@ class Label:
         self.__indices = self.to_index()
         if True in (self.__indices < 0):
             print('Character not supported')
-
-        a = self.__targets
-        b = Label.from_index(self.__indices)
-        asd = 1
 
     @property
     def transcription(self) -> str:
