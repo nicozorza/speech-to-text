@@ -1,4 +1,5 @@
 import os
+import pickle
 from src.utils.AudioFeature import FeatureConfig, AudioFeature
 from src.utils.Database import DatabaseItem, Database
 from src.utils.Label import Label
@@ -17,42 +18,55 @@ feature_config.num_ceps = 26
 # Load project data
 project_data = ProjectData()
 
-database = Database(project_data)
+wav_dirs = [project_data.WAV_TRAIN_DIR, project_data.WAV_TEST_DIR]
 
-# Get the names of each wav file in the directory
-wav_names = os.listdir(project_data.WAV_DIR)
-for wav_index in range(len(wav_names)):
+for wav_dir in wav_dirs:
+    database = Database(project_data)
+    # Get the names of each wav file in the directory
+    wav_names = os.listdir(wav_dir)
+    for wav_index in range(len(wav_names)):
 
-    # Get filenames
-    wav_filename = project_data.WAV_DIR + '/' + wav_names[wav_index]
-    label_filename = project_data.TRANSCRIPTION_DIR + '/' + wav_names[wav_index].split(".")[0] + '.TXT'
+        if wav_dir == project_data.WAV_TRAIN_DIR:
+            label_dir = project_data.TRANSCRIPTION_TRAIN_DIR
+        else:
+            label_dir = project_data.TRANSCRIPTION_TEST_DIR
 
-    audio_feature = AudioFeature.fromFile(wav_filename, feature_config)
+        # Get filenames
+        wav_filename = wav_dir + '/' + wav_names[wav_index]
+        label_filename = label_dir + '/' + wav_names[wav_index].split(".")[0] + '.TXT'
 
-    with open(label_filename, 'r') as f:
-        transcription = f.readlines()[0]
-        # Delete blanks at the beginning and the end of the transcription, transform to lowercase,
-        # delete numbers in the beginning, etc.
-        transcription = (' '.join(transcription.strip().lower().split(' ')[2:]).replace('.', ''))
+        audio_feature = AudioFeature.fromFile(wav_filename, feature_config)
 
-    label = Label(transcription)
+        with open(label_filename, 'r') as f:
+            transcription = f.readlines()[0]
+            # Delete blanks at the beginning and the end of the transcription, transform to lowercase,
+            # delete numbers in the beginning, etc.
+            transcription = (' '.join(transcription.strip().lower().split(' ')[2:]).replace('.', ''))
 
-    # Create database item
-    item = DatabaseItem(audio_feature, label)
+        label = Label(transcription)
 
-    # Add the new data to the database
-    database.append(item)
+        # Create database item
+        item = DatabaseItem(audio_feature, label)
 
-    percentage = wav_index / len(wav_names) * 100
-    print('Completed ' + str(int(percentage)) + '%')
+        # Add the new data to the database
+        database.append(item)
 
-print("Database generated")
-print("Number of elements in database: " + str(len(database)))
+        percentage = wav_index / len(wav_names) * 100
+        print('Completed ' + str(int(percentage)) + '%')
 
-# Save the database into a file
-train_database, val_database, test_database = database.split_database(0.9, 0.1, 0.0)
-train_database.save(project_data.TRAIN_DATABASE_FILE)
-val_database.save(project_data.VAL_DATABASE_FILE)
-test_database.save(project_data.TEST_DATABASE_FILE)
-print("Databases saved")
+    print("Database generated")
+    print("Number of elements in database: " + str(len(database)))
+
+    # Save the database into a file
+    features, labels = database.to_set()
+    if wav_dir == project_data.WAV_TRAIN_DIR:
+        prefix = 'train'
+        database.save(project_data.TRAIN_DATABASE_FILE)
+    else:
+        prefix = 'test'
+        database.save(project_data.TEST_DATABASE_FILE)
+    pickle.dump(features, open(project_data.SOURCE_DIR + '/' + prefix + '_feats.db', 'wb'))
+    pickle.dump(labels, open(project_data.SOURCE_DIR + '/' + prefix + '_labels.db', 'wb'))
+
+    print("Databases saved")
 
