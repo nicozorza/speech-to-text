@@ -7,6 +7,8 @@ class ProjectData:
         self.WAV_TRAIN_DIR = self.WAV_DIR + '/wav_train'
         self.WAV_TEST_DIR = self.WAV_DIR + '/wav_test'
         self.TRANSCRIPTION_DIR = self.SOURCE_DIR + '/transcription'
+        self.TRANSCRIPTION_TRAIN_DIR = self.TRANSCRIPTION_DIR + '/transcription_train'
+        self.TRANSCRIPTION_TEST_DIR = self.TRANSCRIPTION_DIR + '/transcription_test'
         self.DATABASE_DIR = self.SOURCE_DIR
         self.TRAIN_DATABASE_NAME = 'train_database.db'
         self.VAL_DATABASE_NAME = 'validation_database.db'
