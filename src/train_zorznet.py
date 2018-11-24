@@ -1,7 +1,6 @@
 import tensorflow as tf
 from src.neural_network.ZorzNet.ZorzNetData import ZorzNetData
 from src.neural_network.ZorzNet.ZorzNet import ZorzNet
-from src.neural_network.data_conversion import indexToStr
 from src.utils.Database import Database
 from src.utils.Label import Label
 from src.utils.ProjectData import ProjectData
@@ -38,10 +37,6 @@ network_data.num_dense_units = [75, 180]
 network_data.dense_activations = [tf.nn.tanh] * network_data.num_dense_layers
 network_data.dense_regularizer = 0.9
 network_data.dense_batch_normalization = True
-
-network_data.out_activation = None
-network_data.out_regularizer_beta = 0.0
-network_data.out_regularizer = l2_regularizer(network_data.out_regularizer_beta)
 
 network_data.use_dropout = True
 network_data.keep_dropout_input = [0.5]
