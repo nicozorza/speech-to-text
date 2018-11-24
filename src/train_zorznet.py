@@ -1,9 +1,9 @@
 import tensorflow as tf
-from tensorflow.contrib.layers import l2_regularizer
 from src.neural_network.ZorzNet.ZorzNetData import ZorzNetData
 from src.neural_network.ZorzNet.ZorzNet import ZorzNet
 from src.neural_network.data_conversion import indexToStr
 from src.utils.Database import Database
+from src.utils.Label import Label
 from src.utils.ProjectData import ProjectData
 
 ###########################################################################################################
@@ -15,7 +15,7 @@ network_data.model_path = project_data.ZORZNET_MODEL_PATH
 network_data.checkpoint_path = project_data.ZORZNET_CHECKPOINT_PATH
 network_data.tensorboard_path = project_data.ZORZNET_TENSORBOARD_PATH
 
-network_data.num_classes = ord('z') - ord('a') + 1 + 1 + 1 + 1
+network_data.num_classes = (ord('Z') - ord('A') + 1) + (ord('z') - ord('a') + 1) + 1 + 1
 network_data.num_features = 26
 
 network_data.num_input_dense_layers = 1
@@ -61,9 +61,11 @@ network.create_graph()
 train_database = Database.fromFile(project_data.TRAIN_DATABASE_FILE, project_data)
 test_database = Database.fromFile(project_data.TEST_DATABASE_FILE, project_data)
 
-# TODO Add a different method for this
 train_feats, train_labels = train_database.to_set()
 test_feats, test_labels = test_database.to_set()
+
+train_feats = train_feats[0:100]
+train_labels = train_labels[0:100]
 
 network.train(
     train_features=train_feats,
@@ -74,12 +76,12 @@ network.train(
     use_tensorboard=True,
     tensorboard_freq=5,
     training_epochs=1,
-    batch_size=1
+    batch_size=20
 )
 
-network.validate(test_feats, test_labels, show_partial=False, batch_size=20)
+# network.validate(test_feats, test_labels, show_partial=False, batch_size=20)
 
 
 for i in range(2):     # len(val_feats)):
     print('Predicted: {}'.format(network.predict(test_feats[i])))
-    print('Target: {}'.format(indexToStr(test_labels[i])))
+    print('Target: {}'.format(Label.from_index(test_labels[i])))

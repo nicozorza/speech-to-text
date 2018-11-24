@@ -8,6 +8,7 @@ from tensorflow.python.training.saver import Saver
 from src.neural_network.data_conversion import padSequences, sparseTupleFrom, indexToStr
 from src.neural_network.ZorzNet.ZorzNetData import ZorzNetData
 from src.neural_network.network_utils import dense_layer, dense_multilayer, bidirectional_rnn, unidirectional_rnn
+from src.utils.Label import Label
 
 
 class ZorzNet:
@@ -364,6 +365,6 @@ class ZorzNet:
 
             sess.close()
 
-            return indexToStr(predicted[0][1])
+            return Label.from_index(predicted[0][1])
 
 

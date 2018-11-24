@@ -1,9 +1,8 @@
 import tensorflow as tf
-from tensorflow.contrib.layers import l2_regularizer
 from src.neural_network.ZorzNetIterated.ZorzNetIteratedData import ZorzNetIteratedData
 from src.neural_network.ZorzNetIterated.ZorzNetIterated import ZorzNetIterated
-from src.neural_network.data_conversion import indexToStr
 from src.utils.Database import Database
+from src.utils.Label import Label
 from src.utils.ProjectData import ProjectData
 
 ###########################################################################################################
@@ -15,7 +14,8 @@ network_data.model_path = project_data.ZORZNET_ITERATED_MODEL_PATH
 network_data.checkpoint_path = project_data.ZORZNET_ITERATED_CHECKPOINT_PATH
 network_data.tensorboard_path = project_data.ZORZNET_ITERATED_TENSORBOARD_PATH
 
-network_data.num_classes = ord('z') - ord('a') + 1 + 1 + 1 + 1
+# A-Z (26), a-z (26), ñ (1) and blank (1) -> 54
+network_data.num_classes = (ord('Z') - ord('A') + 1) + (ord('z') - ord('a') + 1) + 1 + 1
 network_data.num_features = 26
 
 network_data.num_dense_layers_1 = 1
@@ -96,7 +96,6 @@ network.train(
 
 # network.validate(test_feats, test_labels, show_partial=False, batch_size=20)
 
-#
 for i in range(2):     # len(val_feats)):
     print('Predicted: {}'.format(network.predict(test_feats[i])))
-    print('Target: {}'.format(indexToStr(test_labels[i])))
+    print('Target: {}'.format(Label.from_index(test_labels[i])))
