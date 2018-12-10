@@ -39,6 +39,10 @@ class ProjectData:
         self.ITERATED_CTC_MODEL_PATH = self.OUT_DIR + '/iterated_ctc/' + 'model/model'
         self.ITERATED_CTC_TENSORBOARD_PATH = self.OUT_DIR + '/iterated_ctc/' + 'tensorboard/'
 
+        self.ZORZNET_WORD_CTC_CHECKPOINT_PATH = self.OUT_DIR + '/zorznet_word_ctc/' + 'checkpoint/model.ckpt'
+        self.ZORZNET_WORD_CTC_MODEL_PATH = self.OUT_DIR + '/zorznet_word_ctc/' + 'model/model'
+        self.ZORZNET_WORD_CTC_TENSORBOARD_PATH = self.OUT_DIR + '/zorznet_word_ctc/' + 'tensorboard/'
+
         self.TRAIN_ENCODER_DATABASE_NAME = 'encoder_train_database.db'
         self.VAL_ENCODER_DATABASE_NAME = 'encoder_validation_database.db'
         self.TEST_ENCODER_DATABASE_NAME = 'encoder_test_database.db'

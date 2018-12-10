@@ -1,14 +1,18 @@
 import re
 import numpy as np
+from src.utils.Label import Label
 
 
-class Label:
+class OptimalLabel(Label):
     # Constants
     SPACE_TOKEN = '<space>'
     SPACE_INDEX = 0
     ENIE_TOKEN = '<enie>'
     ENIE_INDEX = ord('Z') - ord('A') + ord('z')-ord('a') + 1 + 1
     FIRST_INDEX = ord('A')
+
+    # A-Z (26), a-z (26), ñ (1) and blank (1) -> 54
+    num_classes = (ord('Z') - ord('A') + 1) + (ord('z')-ord('a') + 1) + 1 + 1
 
     def __init__(self, transcription: str):
         transcription = re.sub('[;:!@#$?.,_\'\"\-]', '', transcription)
@@ -55,7 +59,7 @@ class Label:
             if 0 <= x <= (ord('Z')-ord('A')):
                 char_list.append(chr(x+ord('A')))
 
-            elif x == Label.ENIE_INDEX:  # Replace enie
+            elif x == OptimalLabel.ENIE_INDEX:  # Replace enie
                 char_list.append(chr(241))
             else:
                 char_list.append(chr(x + ord('a') - (ord('Z') - ord('A')) - 1))

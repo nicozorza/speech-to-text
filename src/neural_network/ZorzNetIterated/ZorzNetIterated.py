@@ -6,7 +6,7 @@ import tensorflow as tf
 from tensorflow.python.framework import graph_io
 from tensorflow.python.training.saver import Saver
 from src.neural_network.data_conversion import padSequences, sparseTupleFrom
-from src.utils.Label import Label
+from src.utils.OptimalLabel import OptimalLabel
 from src.neural_network.ZorzNetIterated.ZorzNetIteratedData import ZorzNetIteratedData
 from src.neural_network.network_utils import dense_layer, dense_multilayer, bidirectional_rnn, unidirectional_rnn
 
@@ -450,4 +450,4 @@ class ZorzNetIterated:
 
             sess.close()
 
-            return Label.from_index(predicted[0][1])
+            return OptimalLabel.from_index(predicted[0][1])

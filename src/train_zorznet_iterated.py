@@ -2,7 +2,7 @@ import tensorflow as tf
 from src.neural_network.ZorzNetIterated.ZorzNetIteratedData import ZorzNetIteratedData
 from src.neural_network.ZorzNetIterated.ZorzNetIterated import ZorzNetIterated
 from src.utils.Database import Database
-from src.utils.Label import Label
+from src.utils.ClassicLabel import ClassicLabel
 from src.utils.ProjectData import ProjectData
 
 ###########################################################################################################
@@ -14,8 +14,7 @@ network_data.model_path = project_data.ZORZNET_ITERATED_MODEL_PATH
 network_data.checkpoint_path = project_data.ZORZNET_ITERATED_CHECKPOINT_PATH
 network_data.tensorboard_path = project_data.ZORZNET_ITERATED_TENSORBOARD_PATH
 
-# A-Z (26), a-z (26), ñ (1) and blank (1) -> 54
-network_data.num_classes = (ord('Z') - ord('A') + 1) + (ord('z') - ord('a') + 1) + 1 + 1
+network_data.num_classes = ClassicLabel.num_classes
 network_data.num_features = 26
 
 network_data.num_dense_layers_1 = 1
@@ -85,7 +84,7 @@ test_feats, test_labels = test_database.to_set()
 network.train(
     train_features=train_feats,
     train_labels=train_labels,
-    restore_run=True,
+    restore_run=False,
     save_partial=True,
     save_freq=10,
     use_tensorboard=True,
@@ -98,4 +97,4 @@ network.train(
 
 for i in range(2):     # len(val_feats)):
     print('Predicted: {}'.format(network.predict(test_feats[i])))
-    print('Target: {}'.format(Label.from_index(test_labels[i])))
+    print('Target: {}'.format(ClassicLabel.from_index(test_labels[i])))

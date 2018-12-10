@@ -2,7 +2,7 @@ import tensorflow as tf
 from src.neural_network.ZorzNet.ZorzNetData import ZorzNetData
 from src.neural_network.ZorzNet.ZorzNet import ZorzNet
 from src.utils.Database import Database
-from src.utils.Label import Label
+from src.utils.OptimalLabel import OptimalLabel
 from src.utils.ProjectData import ProjectData
 
 ###########################################################################################################
@@ -79,4 +79,4 @@ network.train(
 
 for i in range(2):     # len(val_feats)):
     print('Predicted: {}'.format(network.predict(test_feats[i])))
-    print('Target: {}'.format(Label.from_index(test_labels[i])))
+    print('Target: {}'.format(OptimalLabel.from_index(test_labels[i])))
