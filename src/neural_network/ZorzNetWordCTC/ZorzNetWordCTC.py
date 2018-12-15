@@ -8,7 +8,6 @@ from tensorflow.python.training.saver import Saver
 from src.neural_network.data_conversion import padSequences, sparseTupleFrom, indexToStr
 from src.neural_network.ZorzNetWordCTC.ZorzNetWordCTCData import ZorzNetWordCTCData
 from src.neural_network.network_utils import dense_layer, dense_multilayer, bidirectional_rnn, unidirectional_rnn
-from src.utils.OptimalLabel import OptimalLabel
 
 
 class ZorzNetWordCTC:
@@ -163,7 +162,10 @@ class ZorzNetWordCTC:
                 corpus = open(self.network_data.corpus_path).read()
 
                 # decode using the "Words" mode of word beam search
-                self.decoded = self.word_beam_search_module.word_beam_search(self.output_time_major, 10, 'NGrams', 0.0,
+                self.decoded = self.word_beam_search_module.word_beam_search(self.output_time_major,
+                                                                             self.network_data.beam_width,
+                                                                             self.network_data.scoring_mode,
+                                                                             self.network_data.smoothing,
                                                                              corpus.encode('utf8'),
                                                                              chars.encode('utf8'),
                                                                              word_chars.encode('utf8'))

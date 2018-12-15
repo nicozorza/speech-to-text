@@ -53,3 +53,7 @@ class ZorzNetWordCTCData:
         self.corpus_path: str = None
 
         self.char_list = list()
+
+        self.beam_width: int = None
+        self.scoring_mode: str = None   # 'Words', 'NGrams', 'NGramsForecast', 'NGramsForecastAndSample'
+        self.smoothing: float = None
