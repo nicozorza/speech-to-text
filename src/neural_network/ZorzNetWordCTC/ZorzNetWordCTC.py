@@ -36,6 +36,7 @@ class ZorzNetWordCTC:
 
         self.output_time_major = None
         self.decoded = None
+        self.edit_distance = None
         self.ler = None
 
         self.tf_is_traing_pl = None
@@ -170,10 +171,25 @@ class ZorzNetWordCTC:
                                                                              word_chars.encode('utf8'))
 
             with tf.name_scope("label_error_rate"):
+                # No es la mejor forma de calcular el LER, pero ya probé varias y esta fue la que mejor anduvo
                 # Inaccuracy: label error rate
-                self.ler = tf.reduce_mean(tf.edit_distance(hypothesis=tf.cast(tf.contrib.layers.dense_to_sparse(self.decoded), tf.int32),
-                                                           truth=self.input_label,
-                                                           normalize=True))
+                dense_label = tf.sparse_to_dense(self.input_label.indices,
+                                                 self.input_label.dense_shape,
+                                                 self.input_label.values)
+                # (self.network_data.num_classes-1) its the blank index
+                decoded_mask = tf.not_equal(self.decoded, self.network_data.num_classes - 1)
+                decoded_mask.set_shape([None, None])
+                decoded_mask = tf.boolean_mask(self.decoded, decoded_mask)
+
+                label_mask = tf.not_equal(dense_label, self.network_data.num_classes - 1)
+                label_mask.set_shape([None, None])
+                label_mask = tf.boolean_mask(dense_label, label_mask)
+
+                self.edit_distance = tf.edit_distance(
+                    hypothesis=tf.cast(tf.contrib.layers.dense_to_sparse([decoded_mask]), tf.int32),
+                    truth=tf.cast(tf.contrib.layers.dense_to_sparse([label_mask]), tf.int32),
+                    normalize=True)
+                self.ler = tf.reduce_mean(self.edit_distance)
                 tf.summary.scalar('label_error_rate', tf.reduce_mean(self.ler))
 
             self.checkpoint_saver = tf.train.Saver(save_relative_paths=True)
