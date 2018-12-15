@@ -12,10 +12,11 @@ class ZorzNetWordCTCData:
         self.num_features: int = None
         self.num_classes: int = None
 
-        self.num_input_dense_layers: int = None
-        self.num_input_dense_units: List[int] = list()
-        self.input_dense_activations: List[int] = list()
-        self.input_batch_normalization: bool = False
+        self.num_dense_layers_1: int = None
+        self.num_dense_units_1: List[int] = list()
+        self.dense_activations_1: List[int] = list()
+        self.batch_normalization_1: bool = False
+        self.keep_dropout_1: List[float] = None
 
         self.is_bidirectional: bool = False
 
@@ -30,22 +31,18 @@ class ZorzNetWordCTCData:
 
         self.rnn_output_sizes: List[int] = None
 
-        self.use_dropout: bool = False
-        self.keep_dropout_input: List[float] = None
-        self.keep_dropout_output: List[float] = None
+        self.num_dense_layers_2: int = None
+        self.num_dense_units_2: List[int] = list()
+        self.dense_activations_2: List[int] = list()
+        self.batch_normalization_2: bool = False
+        self.keep_dropout_2: List[float] = None
 
-        self.num_dense_layers: int = None
-        self.num_dense_units: List[int] = list()
-        self.dense_activations: List[int] = list()
-        self.dense_batch_normalization: bool = False
         self.dense_regularizer: float = None
 
         self.optimizer: Optimizer = None
 
         self.learning_rate: float = None
         self.adam_epsilon: float = None
-
-        self.decoder_function: None
 
         self.word_beam_search_path: str = None
         self.word_char_list_path: str = None

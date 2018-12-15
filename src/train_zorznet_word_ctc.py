@@ -17,30 +17,31 @@ network_data.tensorboard_path = project_data.ZORZNET_WORD_CTC_TENSORBOARD_PATH
 network_data.num_classes = ClassicLabel.num_classes - 1     # timit no tiene la enie
 network_data.num_features = 26
 
-network_data.num_input_dense_layers = 1
-network_data.num_input_dense_units = [100]
-network_data.input_dense_activations = [tf.nn.relu] * network_data.num_input_dense_layers
-network_data.input_batch_normalization = True
+network_data.num_dense_layers_1 = 1
+network_data.num_dense_units_1 = [100]
+network_data.dense_activations_1 = [tf.nn.relu] * network_data.num_dense_layers_1
+network_data.keep_dropout_1 = [0.8]
+network_data.batch_normalization_1 = True
 
 network_data.is_bidirectional = True
-network_data.num_cell_units = [250]
-network_data.cell_activation = [tf.nn.tanh]
+# network_data.num_cell_units = [250]
+# network_data.cell_activation = [tf.nn.tanh]
 network_data.num_fw_cell_units = [100]
 network_data.num_bw_cell_units = [100]
 network_data.cell_fw_activation = [tf.nn.tanh]
 network_data.cell_bw_activation = [tf.nn.tanh]
-network_data.rnn_regularizer = 0.3
 network_data.rnn_output_sizes = [500]
 
-network_data.num_dense_layers = 1
-network_data.num_dense_units = [100]
-network_data.dense_activations = [tf.nn.relu] * network_data.num_dense_layers
+network_data.num_dense_layers_2 = 1
+network_data.num_dense_units_2 = [100]
+network_data.dense_activations_2 = [tf.nn.relu] * network_data.num_dense_layers_2
+network_data.keep_dropout_2 = [0.8]
+network_data.batch_normalization_2 = True
+
 network_data.dense_regularizer = 0.3
-network_data.dense_batch_normalization = True
+network_data.rnn_regularizer = 0.3
 
 network_data.use_dropout = True
-network_data.keep_dropout_input = [0.8]
-network_data.keep_dropout_output = [0.8]
 
 network_data.learning_rate = 0.001
 network_data.adam_epsilon = 0.001

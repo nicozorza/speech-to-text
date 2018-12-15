@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import graph_io
 from tensorflow.python.training.saver import Saver
-from src.neural_network.data_conversion import padSequences, sparseTupleFrom, indexToStr
+from src.neural_network.data_conversion import padSequences, sparseTupleFrom
 from src.neural_network.ZorzNetWordCTC.ZorzNetWordCTCData import ZorzNetWordCTCData
 from src.neural_network.network_utils import dense_layer, dense_multilayer, bidirectional_rnn, unidirectional_rnn
 
@@ -20,8 +20,9 @@ class ZorzNetWordCTC:
         self.input_label = None
         self.rnn_cell = None
         self.multi_rrn_cell = None
-        self.rnn_input = None
+        self.dense_layer_1 = None
         self.rnn_outputs = None
+        self.dense_layer_2 = None
         self.dense_output_no_activation = None
         self.dense_output = None
         self.output_classes = None
@@ -59,23 +60,23 @@ class ZorzNetWordCTC:
                     shape=[None, None],
                     name="input_label")
 
-            self.rnn_input = tf.identity(self.input_feature)
-            with tf.name_scope("input_dense"):
-                self.rnn_input = dense_multilayer(input_ph=self.rnn_input,
-                                                  num_layers=self.network_data.num_input_dense_layers,
-                                                  num_units=self.network_data.num_input_dense_units,
-                                                  name='input_dense_layer',
-                                                  activation_list=self.network_data.input_dense_activations,
-                                                  use_batch_normalization=self.network_data.input_batch_normalization,
-                                                  train_ph=self.tf_is_traing_pl,
-                                                  use_tensorboard=True,
-                                                  keep_prob_list=self.network_data.keep_dropout_input,
-                                                  tensorboard_scope='input_dense_layer')
+            self.dense_layer_1 = tf.identity(self.input_feature)
+            with tf.name_scope("dense_layer_1"):
+                self.dense_layer_1 = dense_multilayer(input_ph=self.dense_layer_1,
+                                                      num_layers=self.network_data.num_dense_layers_1,
+                                                      num_units=self.network_data.num_dense_units_1,
+                                                      name='dense_layer_1',
+                                                      activation_list=self.network_data.dense_activations_1,
+                                                      use_batch_normalization=self.network_data.batch_normalization_1,
+                                                      train_ph=self.tf_is_traing_pl,
+                                                      use_tensorboard=True,
+                                                      keep_prob_list=self.network_data.keep_dropout_1,
+                                                      tensorboard_scope='dense_layer_1')
 
             with tf.name_scope("RNN_cell"):
                 if self.network_data.is_bidirectional:
                     self.rnn_outputs = bidirectional_rnn(
-                        input_ph=self.rnn_input,
+                        input_ph=self.dense_layer_1,
                         seq_len_ph=self.seq_len,
                         num_layers=len(self.network_data.num_fw_cell_units),
                         num_fw_cell_units=self.network_data.num_fw_cell_units,
@@ -89,7 +90,7 @@ class ZorzNetWordCTC:
 
                 else:
                     self.rnn_outputs = unidirectional_rnn(
-                        input_ph=self.rnn_input,
+                        input_ph=self.dense_layer_1,
                         seq_len_ph=self.seq_len,
                         num_layers=len(self.network_data.num_cell_units),
                         num_cell_units=self.network_data.num_cell_units,
@@ -99,17 +100,17 @@ class ZorzNetWordCTC:
                         tensorboard_scope='RNN',
                         output_size=self.network_data.rnn_output_sizes)
 
-            with tf.name_scope("dense_layers"):
-                self.rnn_outputs = dense_multilayer(input_ph=self.rnn_outputs,
-                                                    num_layers=self.network_data.num_dense_layers,
-                                                    num_units=self.network_data.num_dense_units,
-                                                    name='dense_layer',
-                                                    activation_list=self.network_data.dense_activations,
-                                                    use_batch_normalization=self.network_data.dense_batch_normalization,
-                                                    train_ph=self.tf_is_traing_pl,
-                                                    use_tensorboard=True,
-                                                    keep_prob_list=self.network_data.keep_dropout_output,
-                                                    tensorboard_scope='dense_layer')
+            with tf.name_scope("dense_layer_2"):
+                self.dense_layer_2 = dense_multilayer(input_ph=self.rnn_outputs,
+                                                      num_layers=self.network_data.num_dense_layers_2,
+                                                      num_units=self.network_data.num_dense_units_2,
+                                                      name='dense_layer_2',
+                                                      activation_list=self.network_data.dense_activations_2,
+                                                      use_batch_normalization=self.network_data.batch_normalization_2,
+                                                      train_ph=self.tf_is_traing_pl,
+                                                      use_tensorboard=True,
+                                                      keep_prob_list=self.network_data.keep_dropout_2,
+                                                      tensorboard_scope='dense_layer_2')
 
             with tf.name_scope("dense_output"):
                 self.dense_output_no_activation = dense_layer(input_ph=self.rnn_outputs,
@@ -136,9 +137,7 @@ class ZorzNetWordCTC:
 
                 dense_loss = 0
                 for var in tf.trainable_variables():
-                    if var.name.startswith('dense_layer') or \
-                            var.name.startswith('input_dense_layer') and \
-                            'kernel' in var.name:
+                    if var.name.startswith('dense_layer') and 'kernel' in var.name:
                         dense_loss += tf.nn.l2_loss(var)
 
                 loss = tf.nn.ctc_loss(self.input_label, self.dense_output_no_activation, self.seq_len, time_major=False)
