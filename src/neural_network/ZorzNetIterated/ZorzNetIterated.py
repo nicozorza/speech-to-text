@@ -1,20 +1,17 @@
-import os
 import random
 import time
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.framework import graph_io
-from tensorflow.python.training.saver import Saver
+from src.neural_network.NetworkInterface import NetworkInterface
 from src.neural_network.data_conversion import padSequences, sparseTupleFrom
-from src.utils.OptimalLabel import OptimalLabel
 from src.neural_network.ZorzNetIterated.ZorzNetIteratedData import ZorzNetIteratedData
 from src.neural_network.network_utils import dense_layer, dense_multilayer, bidirectional_rnn, unidirectional_rnn
 
 
-class ZorzNetIterated:
+class ZorzNetIterated(NetworkInterface):
     def __init__(self, network_data: ZorzNetIteratedData):
+        super(ZorzNetIterated, self).__init__(network_data)
         self.graph: tf.Graph = tf.Graph()
-        self.network_data = network_data
 
         self.seq_len = None
         self.input_feature = None
@@ -41,7 +38,6 @@ class ZorzNetIterated:
         self.logits_loss = None
         self.loss = None
         self.training_op: tf.Operation = None
-        self.checkpoint_saver: Saver = None
         self.merged_summary = None
 
         self.ler = None
@@ -257,39 +253,6 @@ class ZorzNetIterated:
 
             self.checkpoint_saver = tf.train.Saver(save_relative_paths=True)
             self.merged_summary = tf.summary.merge_all()
-
-    def save_checkpoint(self, sess: tf.Session):
-        if self.network_data.checkpoint_path is not None:
-            self.checkpoint_saver.save(sess, self.network_data.checkpoint_path)
-            # print('Saving checkpoint')
-
-    def load_checkpoint(self, sess: tf.Session):
-        if self.network_data.checkpoint_path is not None and tf.gfile.Exists("{}.meta".format(self.network_data.checkpoint_path)):
-            self.checkpoint_saver.restore(sess, self.network_data.checkpoint_path)
-            # print('Restoring checkpoint')
-        else:
-            session = tf.Session()
-            session.run(tf.initialize_all_variables())
-
-    def save_model(self, sess: tf.Session):
-        if self.network_data.model_path is not None:
-            drive, path_and_file = os.path.splitdrive(self.network_data.model_path)
-            path, file = os.path.split(path_and_file)
-            graph_io.write_graph(sess.graph, path, file, as_text=False)
-            # print('Saving model')
-
-    def create_batch(self, input_list, batch_size):
-        num_batches = int(np.ceil(len(input_list) / batch_size))
-        batch_list = []
-        for _ in range(num_batches):
-            if (_ + 1) * batch_size < len(input_list):
-                aux = input_list[_ * batch_size:(_ + 1) * batch_size]
-            else:
-                aux = input_list[len(input_list)-batch_size:len(input_list)]
-
-            batch_list.append(aux)
-
-        return batch_list
 
     def train(self,
               train_features,

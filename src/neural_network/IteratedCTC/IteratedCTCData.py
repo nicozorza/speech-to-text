@@ -1,13 +1,9 @@
 from typing import List
-from tensorflow.python.training.optimizer import Optimizer
+from src.neural_network.NetworkInterface import NetworkDataInterface
 
 
-class IteratedCTCData:
+class IteratedCTCData(NetworkDataInterface):
     def __init__(self):
-
-        self.checkpoint_path: str = None
-        self.model_path: str = None
-        self.tensorboard_path: str = None
 
         self.num_features: int = None
         self.num_classes: int = None
@@ -73,12 +69,6 @@ class IteratedCTCData:
         self.keep_dropout_4: List[float] = None
         self.kernel_init_4 = None
         self.bias_init_4 = None
-
-        # Optimizer
-        self.optimizer: Optimizer = None
-
-        self.learning_rate: float = None
-        self.adam_epsilon: float = None
 
         self.decoder_function: None
 

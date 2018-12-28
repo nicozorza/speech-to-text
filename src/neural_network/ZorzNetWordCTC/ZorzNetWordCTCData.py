@@ -1,13 +1,11 @@
 from typing import List
 from tensorflow.python.training.optimizer import Optimizer
 
+from src.neural_network.NetworkInterface import NetworkDataInterface
 
-class ZorzNetWordCTCData:
+
+class ZorzNetWordCTCData(NetworkDataInterface):
     def __init__(self):
-
-        self.checkpoint_path: str = None
-        self.model_path: str = None
-        self.tensorboard_path: str = None
 
         self.num_features: int = None
         self.num_classes: int = None
@@ -42,11 +40,6 @@ class ZorzNetWordCTCData:
         self.bias_init_2 = None
 
         self.dense_regularizer: float = None
-
-        self.optimizer: Optimizer = None
-
-        self.learning_rate: float = None
-        self.adam_epsilon: float = None
 
         self.word_beam_search_path: str = None
         self.word_char_list_path: str = None
