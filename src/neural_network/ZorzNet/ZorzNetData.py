@@ -12,15 +12,17 @@ class ZorzNetData:
         self.num_features: int = None
         self.num_classes: int = None
 
-        self.num_input_dense_layers: int = None
-        self.num_input_dense_units: List[int] = list()
-        self.input_dense_activations: List[int] = list()
-        self.input_batch_normalization: bool = False
+        self.num_dense_layers_1: int = None
+        self.num_units_1: List[int] = list()
+        self.dense_activations_1: List[int] = list()
+        self.batch_normalization_1: bool = False
+        self.keep_prob_1: List[float] = None
+        self.kernel_init_1 = None
+        self.bias_init_1 = None
 
         self.is_bidirectional: bool = False
 
         self.num_cell_units: List[int] = None
-        self.rnn_regularizer: float = 0
         self.cell_activation: List[int] = list()
 
         self.num_fw_cell_units: List[int] = None
@@ -30,14 +32,16 @@ class ZorzNetData:
 
         self.rnn_output_sizes: List[int] = None
 
-        self.use_dropout: bool = False
-        self.keep_dropout_input: List[float] = None
-        self.keep_dropout_output: List[float] = None
+        self.num_dense_layers_2: int = None
+        self.num_units_2: List[int] = list()
+        self.dense_activations_2: List[int] = list()
+        self.batch_normalization_2: bool = False
+        self.keep_prob_2: List[float] = None
+        self.kernel_init_2 = None
+        self.bias_init_2 = None
 
-        self.num_dense_layers: int = None
-        self.num_dense_units: List[int] = list()
-        self.dense_activations: List[int] = list()
-        self.dense_batch_normalization: bool = False
+        self.use_dropout: bool = False
+        self.rnn_regularizer: float = 0
         self.dense_regularizer: float = None
 
         self.optimizer: Optimizer = None

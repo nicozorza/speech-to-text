@@ -5,10 +5,9 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import graph_io
 from tensorflow.python.training.saver import Saver
-from src.neural_network.data_conversion import padSequences, sparseTupleFrom, indexToStr
+from src.neural_network.data_conversion import padSequences, sparseTupleFrom
 from src.neural_network.ZorzNet.ZorzNetData import ZorzNetData
 from src.neural_network.network_utils import dense_layer, dense_multilayer, bidirectional_rnn, unidirectional_rnn
-from src.utils.OptimalLabel import OptimalLabel
 
 
 class ZorzNet:
@@ -59,17 +58,19 @@ class ZorzNet:
                     name="input_label")
 
             self.rnn_input = tf.identity(self.input_feature)
-            with tf.name_scope("input_dense"):
+            with tf.name_scope("dense_layer_1"):
                 self.rnn_input = dense_multilayer(input_ph=self.rnn_input,
-                                                  num_layers=self.network_data.num_input_dense_layers,
-                                                  num_units=self.network_data.num_input_dense_units,
-                                                  name='input_dense_layer',
-                                                  activation_list=self.network_data.input_dense_activations,
-                                                  use_batch_normalization=self.network_data.input_batch_normalization,
+                                                  num_layers=self.network_data.num_dense_layers_1,
+                                                  num_units=self.network_data.num_units_1,
+                                                  name='dense_layer_1',
+                                                  activation_list=self.network_data.dense_activations_1,
+                                                  use_batch_normalization=self.network_data.batch_normalization_1,
                                                   train_ph=self.tf_is_traing_pl,
                                                   use_tensorboard=True,
-                                                  keep_prob_list=self.network_data.keep_dropout_input,
-                                                  tensorboard_scope='input_dense_layer')
+                                                  keep_prob_list=self.network_data.keep_prob_1,
+                                                  kernel_initializers=self.network_data.kernel_init_1,
+                                                  bias_initializers=self.network_data.bias_init_1,
+                                                  tensorboard_scope='dense_layer_1')
 
             with tf.name_scope("RNN_cell"):
                 if self.network_data.is_bidirectional:
@@ -98,17 +99,19 @@ class ZorzNet:
                         tensorboard_scope='RNN',
                         output_size=self.network_data.rnn_output_sizes)
 
-            with tf.name_scope("dense_layers"):
+            with tf.name_scope("dense_layers_2"):
                 self.rnn_outputs = dense_multilayer(input_ph=self.rnn_outputs,
-                                                    num_layers=self.network_data.num_dense_layers,
-                                                    num_units=self.network_data.num_dense_units,
-                                                    name='dense_layer',
-                                                    activation_list=self.network_data.dense_activations,
-                                                    use_batch_normalization=self.network_data.dense_batch_normalization,
+                                                    num_layers=self.network_data.num_dense_layers_2,
+                                                    num_units=self.network_data.num_units_2,
+                                                    name='dense_layers_2',
+                                                    activation_list=self.network_data.dense_activations_2,
+                                                    use_batch_normalization=self.network_data.batch_normalization_2,
                                                     train_ph=self.tf_is_traing_pl,
                                                     use_tensorboard=True,
-                                                    keep_prob_list=self.network_data.keep_dropout_output,
-                                                    tensorboard_scope='dense_layer')
+                                                    keep_prob_list=self.network_data.keep_prob_2,
+                                                    kernel_initializers=self.network_data.kernel_init_2,
+                                                    bias_initializers=self.network_data.bias_init_2,
+                                                    tensorboard_scope='dense_layers_2')
 
             with tf.name_scope("dense_output"):
                 self.dense_output_no_activation = dense_layer(input_ph=self.rnn_outputs,
@@ -365,6 +368,6 @@ class ZorzNet:
 
             sess.close()
 
-            return OptimalLabel.from_index(predicted[0][1])
+            return predicted[0][1]
 
 

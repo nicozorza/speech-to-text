@@ -98,14 +98,14 @@ def get_network_data(args):
     network_data.num_classes = ord('z') - ord('a') + 1 + 1 + 1
     network_data.num_features = 26
 
-    network_data.num_input_dense_layers = int(args['input_dense_depth'])
-    if network_data.num_input_dense_layers == 1:
-        network_data.num_input_dense_units = [args['input_dense_1']]
+    network_data.num_dense_layers_1 = int(args['input_dense_depth'])
+    if network_data.num_dense_layers_1 == 1:
+        network_data.num_units_1 = [args['input_dense_1']]
     else:
-        network_data.num_input_dense_units = [args['input_dense_1'], args['input_dense_2']]
+        network_data.num_units_1 = [args['input_dense_1'], args['input_dense_2']]
 
-    network_data.input_dense_activations = [tf.nn.tanh] * network_data.num_input_dense_layers
-    network_data.input_batch_normalization = True
+    network_data.dense_activations_1 = [tf.nn.tanh] * network_data.num_dense_layers_1
+    network_data.batch_normalization_1 = True
 
     network_data.is_bidirectional = True
     network_data.rnn_regularizer = args['rnn_regularizer']
@@ -118,14 +118,14 @@ def get_network_data(args):
     network_data.cell_fw_activation = [tf.nn.tanh] * len(network_data.num_fw_cell_units)
     network_data.cell_bw_activation = [tf.nn.tanh] * len(network_data.num_bw_cell_units)
 
-    network_data.num_dense_layers = int(args['out_dense_depth'])
-    if network_data.num_dense_layers == 1:
-        network_data.num_dense_units = [args['out_dense_1']]
+    network_data.num_dense_layers_2 = int(args['out_dense_depth'])
+    if network_data.num_dense_layers_2 == 1:
+        network_data.num_units_2 = [args['out_dense_1']]
     else:
-        network_data.num_dense_units = [args['out_dense_1'], args['out_dense_2']]
-    network_data.dense_activations = [tf.nn.tanh] * network_data.num_dense_layers
+        network_data.num_units_2 = [args['out_dense_1'], args['out_dense_2']]
+    network_data.dense_activations_2 = [tf.nn.tanh] * network_data.num_dense_layers_2
     network_data.dense_regularizer = args['dense_regularizer']
-    network_data.dense_batch_normalization = True
+    network_data.batch_normalization_2 = True
 
     network_data.out_activation = None
     network_data.out_regularizer_beta = 0.0
@@ -137,14 +137,14 @@ def get_network_data(args):
                                                     epsilon=network_data.adam_epsilon)
 
     network_data.use_dropout = True # args['use_dropout']
-    if network_data.num_input_dense_layers == 1:
-        network_data.keep_dropout_input = [args['input_keep_1']]
+    if network_data.num_dense_layers_1 == 1:
+        network_data.keep_prob_1 = [args['input_keep_1']]
     else:
-        network_data.keep_dropout_input = [args['input_keep_1'], args['input_keep_2']]
-    if network_data.num_dense_layers == 1:
-        network_data.keep_dropout_output = [args['output_keep_1']]
+        network_data.keep_prob_1 = [args['input_keep_1'], args['input_keep_2']]
+    if network_data.num_dense_layers_2 == 1:
+        network_data.keep_prob_2 = [args['output_keep_1']]
     else:
-        network_data.keep_dropout_output = [args['output_keep_1'], args['output_keep_2']]
+        network_data.keep_prob_2 = [args['output_keep_1'], args['output_keep_2']]
 
     network_data.decoder_function = tf.nn.ctc_greedy_decoder
 
