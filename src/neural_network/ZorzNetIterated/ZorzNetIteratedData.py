@@ -18,6 +18,8 @@ class ZorzNetIteratedData:
         self.dense_activations_1: List[int] = list()
         self.batch_normalization_1: bool = False
         self.keep_dropout_1: List[float] = None
+        self.kernel_init_1 = None
+        self.bias_init_1 = None
 
         # First RNN layer
         self.is_bidirectional_1: bool = False
@@ -38,6 +40,8 @@ class ZorzNetIteratedData:
         self.dense_activations_2: List[int] = list()
         self.batch_normalization_2: bool = False
         self.keep_dropout_2: List[float] = None
+        self.kernel_init_2 = None
+        self.bias_init_2 = None
 
         # Third dense layer: iterated ctc
         self.num_dense_layers_3: int = None
@@ -45,6 +49,8 @@ class ZorzNetIteratedData:
         self.dense_activations_3: List[int] = list()
         self.batch_normalization_3: bool = False
         self.keep_dropout_3: List[float] = None
+        self.kernel_init_3 = None
+        self.bias_init_3 = None
 
         # Second RNN layer: iterated ctc
         self.is_bidirectional_2: bool = False
@@ -65,6 +71,8 @@ class ZorzNetIteratedData:
         self.dense_activations_4: List[int] = list()
         self.batch_normalization_4: bool = False
         self.keep_dropout_4: List[float] = None
+        self.kernel_init_4 = None
+        self.bias_init_4 = None
 
         # Optimizer
         self.optimizer: Optimizer = None
