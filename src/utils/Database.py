@@ -43,6 +43,7 @@ class Database:
         return self.__database[index]
 
     def __len__(self):
+        self.__length = len(self.__database)
         return self.__length
 
     def append(self, item: DatabaseItem):

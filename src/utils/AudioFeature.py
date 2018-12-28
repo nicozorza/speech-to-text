@@ -24,6 +24,7 @@ class AudioFeature:
     def __init__(self):
         self.__feature = np.empty(0)
         self.__fs: float = None
+        self.num_features: int = None
 
     def __len__(self):
         return len(self.__feature)
@@ -84,7 +85,9 @@ class AudioFeature:
             audio = audio / abs(max(audio))
         feature = AudioFeature()
         feature.__fs = fs
+
         if feature_config.feature_type is 'spec':
+            feature.num_features = feature_config.nfft
             _, _, feature.__feature = feature.specgram(
                 audio=audio,
                 fs=fs,
@@ -92,6 +95,7 @@ class AudioFeature:
                 window_size=feature_config.winlen,
                 step_size=feature_config.winstride)
         elif feature_config.feature_type is 'log_spec':
+            feature.num_features = feature_config.nfft
             _, _, feature.__feature = feature.log_specgram(
                 audio=audio,
                 fs=fs,
@@ -99,6 +103,7 @@ class AudioFeature:
                 window_size=feature_config.winlen,
                 step_size=feature_config.winstride)
         elif feature_config.feature_type is 'mfcc':
+            feature.num_features = feature_config.num_ceps
             if feature_config.highfreq is None:
                 feature_config.highfreq = fs/2
             feature.__feature = feature.mfcc(
