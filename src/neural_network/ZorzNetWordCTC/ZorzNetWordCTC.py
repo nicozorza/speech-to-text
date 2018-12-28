@@ -72,6 +72,8 @@ class ZorzNetWordCTC:
                                                       train_ph=self.tf_is_traing_pl,
                                                       use_tensorboard=True,
                                                       keep_prob_list=self.network_data.keep_dropout_1,
+                                                      kernel_initializers=self.network_data.kernel_init_1,
+                                                      bias_initializers=self.network_data.bias_init_1,
                                                       tensorboard_scope='dense_layer_1')
 
             with tf.name_scope("RNN_cell"):
@@ -111,6 +113,8 @@ class ZorzNetWordCTC:
                                                       train_ph=self.tf_is_traing_pl,
                                                       use_tensorboard=True,
                                                       keep_prob_list=self.network_data.keep_dropout_2,
+                                                      kernel_initializers=self.network_data.kernel_init_2,
+                                                      bias_initializers=self.network_data.bias_init_2,
                                                       tensorboard_scope='dense_layer_2')
 
             with tf.name_scope("dense_output"):

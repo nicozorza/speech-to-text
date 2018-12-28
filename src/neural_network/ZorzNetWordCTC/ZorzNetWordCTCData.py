@@ -17,6 +17,8 @@ class ZorzNetWordCTCData:
         self.dense_activations_1: List[int] = list()
         self.batch_normalization_1: bool = False
         self.keep_dropout_1: List[float] = None
+        self.kernel_init_1 = None
+        self.bias_init_1 = None
 
         self.is_bidirectional: bool = False
 
@@ -36,6 +38,8 @@ class ZorzNetWordCTCData:
         self.dense_activations_2: List[int] = list()
         self.batch_normalization_2: bool = False
         self.keep_dropout_2: List[float] = None
+        self.kernel_init_2 = None
+        self.bias_init_2 = None
 
         self.dense_regularizer: float = None
 

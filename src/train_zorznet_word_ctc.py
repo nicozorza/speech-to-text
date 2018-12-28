@@ -22,6 +22,9 @@ network_data.num_dense_units_1 = [100]
 network_data.dense_activations_1 = [tf.nn.relu] * network_data.num_dense_layers_1
 network_data.keep_dropout_1 = [0.8]
 network_data.batch_normalization_1 = True
+network_data.kernel_init_1 = [tf.truncated_normal_initializer(mean=0, stddev=0.1)] * network_data.num_dense_layers_1
+network_data.bias_init_1 = [tf.zeros_initializer()] * network_data.num_dense_layers_1
+
 
 network_data.is_bidirectional = True
 # network_data.num_cell_units = [250]
@@ -37,6 +40,9 @@ network_data.num_dense_units_2 = [100]
 network_data.dense_activations_2 = [tf.nn.relu] * network_data.num_dense_layers_2
 network_data.keep_dropout_2 = [0.8]
 network_data.batch_normalization_2 = True
+network_data.kernel_init_2 = [tf.truncated_normal_initializer(mean=0, stddev=0.1)] * network_data.num_dense_layers_2
+network_data.bias_init_2 = [tf.zeros_initializer()] * network_data.num_dense_layers_2
+
 
 network_data.dense_regularizer = 0.3
 network_data.rnn_regularizer = 0.3
@@ -69,28 +75,28 @@ test_database = Database.fromFile(project_data.TEST_DATABASE_FILE, project_data)
 train_feats, train_labels = train_database.to_set()
 test_feats, test_labels = test_database.to_set()
 
-train_feats = train_feats[0:100]
-train_labels = train_labels[0:100]
+train_feats = train_feats[0:1]
+train_labels = train_labels[0:11]
 
 network.train(
     train_features=train_feats,
     train_labels=train_labels,
-    restore_run=False,
+    restore_run=True,
     save_partial=False,
     save_freq=10,
     use_tensorboard=False,
     tensorboard_freq=5,
-    training_epochs=1,
-    batch_size=5
+    training_epochs=50,
+    batch_size=1
 )
 
 # network.validate(test_feats, test_labels, show_partial=False, batch_size=20)
 
 
-for i in range(3):     # len(val_feats)):
-    print('Predicted: {}'.format(network.predict(test_feats[i])))
-    print('Target: {}'.format(ClassicLabel.from_index(test_labels[i])))
+# for i in range(3):     # len(val_feats)):
+#     print('Predicted: {}'.format(network.predict(test_feats[i])))
+#     print('Target: {}'.format(ClassicLabel.from_index(test_labels[i])))
 
-for i in range(3):  # len(val_feats)):
+for i in range(1):  # len(val_feats)):
     print('Predicted: {}'.format(network.predict(train_feats[i])))
     print('Target: {}'.format(ClassicLabel.from_index(train_labels[i])))
