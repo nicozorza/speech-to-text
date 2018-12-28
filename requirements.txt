@@ -7,7 +7,6 @@ Brlapi==0.6.5
 certifi==2017.4.17
 chardet==3.0.4
 command-not-found==0.3
-cryptography==1.9
 cupshelpers==1.0
 defer==1.0.6
 distro-info==0.17
@@ -33,7 +32,6 @@ pexpect==4.2.1
 Pillow==4.1.1
 pipenv==2018.11.26
 protobuf==3.6.1
-pycrypto==2.6.1
 pycups==1.9.73
 pygobject==3.24.1
 python-apt==1.4.0b3
@@ -42,7 +40,6 @@ python-speech-features==0.6
 pyxdg==0.25
 PyYAML==3.12
 reportlab==3.4.0
-requests==2.18.1
 scipy==1.2.0
 screen-resolution-extra==0.0.0
 SecretStorage==2.3.1
@@ -56,7 +53,6 @@ termcolor==1.1.0
 ubuntu-drivers-common==0.0.0
 ufw==0.35
 unattended-upgrades==0.1
-urllib3==1.21.1
 usb-creator==0.3.3
 virtualenv==16.1.0
 virtualenv-clone==0.4.0
