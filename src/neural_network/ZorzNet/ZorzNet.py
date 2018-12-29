@@ -187,14 +187,7 @@ class ZorzNet(NetworkInterface):
 
             train_writer = None
             if use_tensorboard:
-                if self.network_data.tensorboard_path is not None:
-                    # Set up tensorboard summaries and saver
-                    if tf.gfile.Exists(self.network_data.tensorboard_path + '/train') is not True:
-                        tf.gfile.MkDir(self.network_data.tensorboard_path + '/train')
-                    else:
-                        tf.gfile.DeleteRecursively(self.network_data.tensorboard_path + '/train')
-
-                train_writer = tf.summary.FileWriter("{}train".format(self.network_data.tensorboard_path), self.graph)
+                train_writer = self.create_tensorboard_writer(self.network_data.tensorboard_path + '/train', self.graph)
                 train_writer.add_graph(sess.graph)
 
             loss_ep = 0

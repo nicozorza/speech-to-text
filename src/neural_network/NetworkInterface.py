@@ -20,6 +20,18 @@ class NetworkInterface:
         self.network_data = network_data
         self.checkpoint_saver: Saver = None
 
+    def create_tensorboard_writer(self, tensorboard_path, graph):
+        if tensorboard_path is not None:
+            # Set up tensorboard summaries and saver
+            if tf.gfile.Exists(tensorboard_path) is not True:
+                tf.gfile.MkDir(tensorboard_path)
+            else:
+                tf.gfile.DeleteRecursively(tensorboard_path)
+
+            return tf.summary.FileWriter("{}".format(tensorboard_path), graph)
+        else:
+            return None
+
     def save_checkpoint(self, sess: tf.Session):
         if self.network_data.checkpoint_path is not None:
             self.checkpoint_saver.save(sess, self.network_data.checkpoint_path)
