@@ -43,6 +43,10 @@ class ProjectData:
         self.ZORZNET_WORD_CTC_MODEL_PATH = self.OUT_DIR + 'zorznet_word_ctc/' + 'model/model'
         self.ZORZNET_WORD_CTC_TENSORBOARD_PATH = self.OUT_DIR + 'zorznet_word_ctc/' + 'tensorboard/'
 
+        self.LAS_NET_CHECKPOINT_PATH = self.OUT_DIR + 'las_net/' + 'checkpoint/model.ckpt'
+        self.LAS_NET_MODEL_PATH = self.OUT_DIR + 'las_net/' + 'model/model'
+        self.LAS_NET_TENSORBOARD_PATH = self.OUT_DIR + 'las_net/' + 'tensorboard/'
+
         self.TRAIN_ENCODER_DATABASE_NAME = 'encoder_train_database.db'
         self.VAL_ENCODER_DATABASE_NAME = 'encoder_validation_database.db'
         self.TEST_ENCODER_DATABASE_NAME = 'encoder_test_database.db'

@@ -140,6 +140,87 @@ def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_fw_cell_units: 
     return input_ph
 
 
+def lstm_cell(size, activation, keep_prob=None):
+    cell = tf.nn.rnn_cell.LSTMCell(size, activation=activation)
+
+    if keep_prob is not None:
+        cell = tf.nn.rnn_cell.DropoutWrapper(cell, input_keep_prob=keep_prob,
+                                             output_keep_prob=keep_prob, state_keep_prob=keep_prob)
+    return cell
+
+
+def bidirectional_lstm(input_ph, seq_len_ph, num_units, activation=None, keep_prob=None,
+                       initial_state_fw=None, initial_state_bw=None, scope=None):
+
+    fw_cell = lstm_cell(num_units, activation, keep_prob)
+    bw_cell = lstm_cell(num_units, activation, keep_prob)
+
+    (out_fw, out_bw), (state_fw, state_bw) = tf.nn.bidirectional_dynamic_rnn(
+        cell_fw=fw_cell,
+        cell_bw=bw_cell,
+        inputs=input_ph,
+        sequence_length=seq_len_ph,
+        initial_state_fw=initial_state_fw,
+        initial_state_bw=initial_state_bw,
+        dtype=tf.float32,
+        scope=scope)
+
+    return (out_fw, out_bw), (state_fw, state_bw)
+
+
+def bidirectional_pyramidal_rnn(input_ph, seq_len_ph, num_layers: int, num_units: List[int], name: str, activation_list,
+                                use_tensorboard: bool = True, tensorboard_scope: str = None, keep_prob=None):
+
+    if activation_list is None:
+        activation_list = [None] * num_layers
+
+    if keep_prob is None:
+        keep_prob = [None] * num_layers
+
+    initial_state_fw = None
+    initial_state_bw = None
+
+    for n in range(num_layers):
+        (out_fw, out_bw), (state_fw, state_bw) = bidirectional_lstm(
+            input_ph=input_ph,
+            seq_len_ph=seq_len_ph,
+            num_units=num_units[n],
+            scope=name+'_{}'.format(n),
+            initial_state_fw=initial_state_fw,
+            initial_state_bw=initial_state_bw,
+            activation=activation_list[n],
+            keep_prob=keep_prob[n]
+        )
+
+        inputs = tf.concat([out_fw, out_bw], -1)
+        input_ph, seq_len_ph = reshape_pyramidal(inputs, seq_len_ph)
+        initial_state_fw = state_fw
+        initial_state_bw = state_bw
+
+    bi_state_c = tf.concat((initial_state_fw.c, initial_state_fw.c), -1)
+    bi_state_h = tf.concat((initial_state_fw.h, initial_state_fw.h), -1)
+    bi_lstm_state = tf.nn.rnn_cell.LSTMStateTuple(c=bi_state_c, h=bi_state_h)
+    state = tuple([bi_lstm_state] * num_layers)
+
+    if use_tensorboard:
+        tf.summary.histogram(tensorboard_scope, input_ph)
+
+    return input_ph, seq_len_ph, state
+
+
+def reshape_pyramidal(outputs, sequence_length):
+    # [batch_size, max_time, num_units]
+    shape = tf.shape(outputs)
+    batch_size, max_time = shape[0], shape[1]
+    num_units = outputs.get_shape().as_list()[-1]
+
+    pads = [[0, 0], [0, tf.floormod(max_time, 2)], [0, 0]]
+    outputs = tf.pad(outputs, pads)
+
+    concat_outputs = tf.reshape(outputs, (batch_size, -1, num_units * 2))
+    return concat_outputs, tf.floordiv(sequence_length, 2) + tf.floormod(sequence_length, 2)
+
+
 # TODO Add dropout and batch normalization
 def recurrent_encoder_layer(input_ph, seq_len: int, activation_list, bw_cells: List[int], fw_cells: List[int] = None,
                             name: str = "encoder", feature_sizes: List[int] = None, out_size: int = None,
