@@ -271,3 +271,21 @@ def decoder_layer(input_ph, num_layers: int, num_units: List[int], activation_li
 
     return dense_multilayer(input_ph, num_layers, num_units, name, activation_list, use_batch_normalization, train_ph,
                             use_tensorboard, keep_prob_list, tensorboard_scope)
+
+
+def attention_cell(input, num_layers: int, rnn_units_list: List[int], rnn_activations_list,
+                   attention_units, lengths):
+
+    cell = tf.nn.rnn_cell.MultiRNNCell(
+        [lstm_cell(rnn_units_list[_], rnn_activations_list[_]) for _ in range(num_layers)])
+
+    # TODO Add other mechanisms
+    attention_mechanism = tf.contrib.seq2seq.BahdanauAttention(num_units=attention_units,
+                                                               memory=input,
+                                                               memory_sequence_length=lengths,
+                                                               name='BahdanauAttention')
+
+    return tf.contrib.seq2seq.AttentionWrapper(cell=cell,
+                                               attention_mechanism=attention_mechanism,
+                                               attention_layer_size=None,
+                                               output_attention=False)

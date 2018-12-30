@@ -19,6 +19,7 @@ network_data.tensorboard_path = project_data.LAS_NET_TENSORBOARD_PATH
 
 network_data.num_classes = ClassicLabel.num_classes - 1
 network_data.num_features = 26
+network_data.num_embeddings = 10
 
 network_data.num_dense_layers_1 = 1
 network_data.num_units_1 = [100]
@@ -28,10 +29,12 @@ network_data.keep_prob_1 = [0.8]
 network_data.kernel_init_1 = [tf.truncated_normal_initializer(mean=0, stddev=0.1)] * network_data.num_dense_layers_1
 network_data.bias_init_1 = [tf.zeros_initializer()] * network_data.num_dense_layers_1
 
-network_data.listener_num_layers = 3
+network_data.listener_num_layers = 2
 network_data.listener_num_units = [128] * network_data.listener_num_layers
 network_data.listener_activation_list = [tf.nn.tanh] * network_data.listener_num_layers
 network_data.listener_keep_prob_list = [None] * network_data.listener_num_layers
+
+network_data.learning_rate = 0.0001
 ###########################################################################################################
 
 network = LASNet(network_data)
@@ -43,23 +46,29 @@ test_database = Database.fromFile(project_data.TEST_DATABASE_FILE, project_data)
 train_feats, train_labels = train_database.to_set()
 test_feats, test_labels = test_database.to_set()
 
-train_feats = train_feats[1:3]
-train_labels = train_labels[1:3]
+train_feats = train_feats[1:2]
+train_labels = train_labels[1:2]
 
 with network.graph.as_default():
     sess = tf.Session(graph=network.graph)
     sess.run(tf.global_variables_initializer())
 
     batch_train_features, batch_train_seq_len = padSequences(train_feats)
-
+    batch_train_labels = sparseTupleFrom(train_labels)
+    print(len((train_labels[0])))
+    asd = 1
     feed_dict = {
-        network.input_feature: batch_train_features,
-        network.seq_len: batch_train_seq_len,
+        network.input_features: batch_train_features,
+        network.input_features_length: batch_train_seq_len,
+        network.input_labels: train_labels,
+        network.input_labels_length: [len(train_labels[0])]
     }
 
-    o, sl = sess.run([network.listener_output, network.listener_seq_len], feed_dict)
+    for i in range(10):
+        o, l, _ = sess.run([network.logits, network.loss, network.train_op], feed_dict)
 
-    print(o)
-    print(np.shape(o))
-    print(batch_train_seq_len)
-    print(sl)
+        # print(o)
+        print(l)
+    # print(np.shape(o))
+    # # print(batch_train_seq_len)
+    # # print(sl)

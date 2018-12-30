@@ -10,6 +10,10 @@ class NetworkDataInterface:
     checkpoint_path: str = None
     model_path: str = None
     tensorboard_path: str = None
+
+    num_features: int = None
+    num_classes: int = None
+
     optimizer: Optimizer = None
     learning_rate: float = None
     adam_epsilon: float = None

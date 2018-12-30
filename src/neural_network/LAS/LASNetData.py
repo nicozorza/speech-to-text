@@ -5,8 +5,7 @@ from src.neural_network.NetworkInterface import NetworkDataInterface
 class LASNetData(NetworkDataInterface):
     def __init__(self):
 
-        self.num_features: int = None
-        self.num_classes: int = None
+        self.num_embeddings = None
 
         self.num_dense_layers_1: int = None
         self.num_units_1: List[int] = list()
