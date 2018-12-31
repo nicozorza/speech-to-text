@@ -6,7 +6,7 @@ from tensorflow.python.layers.core import Dense
 from src.neural_network.NetworkInterface import NetworkInterface
 from src.neural_network.data_conversion import padSequences
 from src.neural_network.LAS.LASNetData import LASNetData
-from src.neural_network.network_utils import bidirectional_pyramidal_rnn, attention_layer
+from src.neural_network.network_utils import bidirectional_pyramidal_rnn, attention_layer, dense_multilayer
 from src.utils.LASLabel import LASLabel
 
 
@@ -18,7 +18,27 @@ class LASNet(NetworkInterface):
 
         self.tf_is_traing_pl = None
 
-        self.rnn_size_encoder = 450
+        self.input_features = None
+        self.input_features_length = None
+        self.input_labels = None
+        self.input_labels_length = None
+        self.max_label_length = None
+        self.batch_size = None
+
+        self.embedding = None
+        self.label_embedding = None
+
+        self.dense_layer_1_out = None
+
+        self.listener_output = None
+        self.listener_out_len = None
+
+        self.logits = None
+
+        self.loss = None
+        self.train_op = None
+
+        self.output_projection = None
 
         self.merged_summary = None
 
@@ -57,9 +77,24 @@ class LASNet(NetworkInterface):
                                                               ids=self.input_labels,
                                                               name='label_embedding')
 
-            with tf.name_scope("listener"):
-                self.listener_output, self.listener_out_len, listener_state = inputs, seq_lengths, listener_state = bidirectional_pyramidal_rnn(
+            with tf.name_scope("dense_layer_1"):
+                self.dense_layer_1_out = dense_multilayer(
                     input_ph=self.input_features,
+                    num_layers=self.network_data.num_dense_layers_1,
+                    num_units=self.network_data.num_units_1,
+                    name='dense_layer_1',
+                    activation_list=self.network_data.dense_activations_1,
+                    use_batch_normalization=self.network_data.batch_normalization_1,
+                    train_ph=self.tf_is_traing_pl,
+                    use_tensorboard=True,
+                    keep_prob_list=self.network_data.keep_prob_1,
+                    kernel_initializers=self.network_data.kernel_init_1,
+                    bias_initializers=self.network_data.bias_init_1,
+                    tensorboard_scope='dense_layer_1')
+
+            with tf.name_scope("listener"):
+                self.listener_output, self.listener_out_len, listener_state = bidirectional_pyramidal_rnn(
+                    input_ph=self.dense_layer_1_out,
                     seq_len_ph=self.input_features_length,
                     num_layers=self.network_data.listener_num_layers,
                     num_units=self.network_data.listener_num_units,
@@ -88,7 +123,6 @@ class LASNet(NetworkInterface):
             self.checkpoint_saver = tf.train.Saver(save_relative_paths=True)
             self.merged_summary = tf.summary.merge_all()
 
-
     def build_decoder(self, encoder_outputs, encoder_state):
 
         self.output_projection = Dense(self.network_data.num_classes, name='output_projection')
@@ -105,9 +139,7 @@ class LASNet(NetworkInterface):
                 batch_size=self.batch_size,
                 input_state=encoder_state)
 
-
             # Train
-
             helper = tf.contrib.seq2seq.ScheduledEmbeddingTrainingHelper(
                 inputs=self.label_embedding,
                 sequence_length=self.input_labels_length,
@@ -134,9 +166,7 @@ class LASNet(NetworkInterface):
             sample_id = outputs.sample_id
             logits = outputs.rnn_output
 
-
         return logits, sample_id, final_context_state
-
 
     def train(self,
               train_features,
@@ -205,7 +235,7 @@ class LASNet(NetworkInterface):
                         # Padding input to max_time_step of this batch
                         tensorboard_features, tensorboard_seq_len = padSequences(feature)
                         tensorboard_labels, tensorboard_labels_len = padSequences(label, dtype=np.int64,
-                                                                                 value=LASLabel.PAD_INDEX)
+                                                                                  value=LASLabel.PAD_INDEX)
 
                         tensorboard_feed_dict = {
                             self.input_features: tensorboard_features,
@@ -242,7 +272,7 @@ class LASNet(NetworkInterface):
 
             return 0, loss_ep
 
-    def validate(self, features, labels, show_partial: bool=True, batch_size: int = 1):
+    def validate(self, features, labels, show_partial: bool = True, batch_size: int = 1):
         pass
 
     def predict(self, feature):
