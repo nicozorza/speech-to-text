@@ -334,3 +334,38 @@ def attention_decoder(input_cell, initial_state, embedding, seq_embedding, seq_e
     logits = outputs.rnn_output
 
     return logits, sample_id, final_context_state
+
+
+def beam_search_decoder(input_cell, embedding, start_token, end_token, initial_state,
+                        beam_width, output_layer, max_iterations, name, time_major=False):
+    decoder = tf.contrib.seq2seq.BeamSearchDecoder(cell=input_cell,
+                                                   embedding=embedding,
+                                                   start_tokens=start_token,
+                                                   end_token=end_token,
+                                                   initial_state=initial_state,
+                                                   beam_width=beam_width,
+                                                   output_layer=output_layer)
+
+    outputs, final_context_state, _ = tf.contrib.seq2seq.dynamic_decode(decoder,
+                                                                        maximum_iterations=max_iterations,
+                                                                        output_time_major=time_major,
+                                                                        impute_finished=False,
+                                                                        swap_memory=False,
+                                                                        scope=name)
+    return outputs.predicted_ids
+
+
+def greedy_decoder(input_cell, embedding, start_token, end_token, initial_state, output_layer,
+                   max_iterations, name, time_major=False):
+    helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(embedding, start_token, end_token)
+
+    decoder = tf.contrib.seq2seq.BasicDecoder(input_cell, helper, initial_state,
+                                              output_layer=output_layer)
+
+    outputs, final_context_state, _ = tf.contrib.seq2seq.dynamic_decode(decoder,
+                                                                        maximum_iterations=max_iterations,
+                                                                        output_time_major=time_major,
+                                                                        impute_finished=False,
+                                                                        swap_memory=False,
+                                                                        scope=name)
+    return outputs.sample_id

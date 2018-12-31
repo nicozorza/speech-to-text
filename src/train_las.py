@@ -19,6 +19,10 @@ network_data.tensorboard_path = project_data.LAS_NET_TENSORBOARD_PATH
 network_data.num_classes = LASLabel.num_classes
 network_data.num_features = 26
 network_data.num_embeddings = 10
+network_data.sos_id = LASLabel.SOS_INDEX
+network_data.eos_id = LASLabel.EOS_INDEX
+
+network_data.beam_width = 2
 
 network_data.num_dense_layers_1 = 1
 network_data.num_units_1 = [100]
@@ -55,8 +59,8 @@ train_database = Database.fromFile(project_data.TRAIN_DATABASE_FILE, project_dat
 train_feats, train_labels = train_database.to_set()
 # test_feats, test_labels = test_database.to_set()
 
-train_feats = train_feats[1:3]
-train_labels = train_labels[1:3]
+train_feats = train_feats[1:2]
+train_labels = train_labels[1:2]
 
 print(train_labels)
 print(LASLabel.from_index(train_labels[0]))
@@ -78,7 +82,7 @@ print(len((train_labels[0])))
 #     }
 #
 #     for i in range(3):
-#         o, l, _, l1, l2 = sess.run([network.logits, network.loss, network.train_op, network.input_features_length, network.listener_out_len], feed_dict)
+#         o, l, _, l1, l2 = sess.run([network.decoded_ids, network.loss, network.train_op, network.input_features_length, network.listener_out_len], feed_dict)
 #
 #         # print(o)
 #         print(l)
@@ -91,10 +95,14 @@ print(len((train_labels[0])))
 network.train(
     train_features=train_feats,
     train_labels=train_labels,
-    restore_run=False,
+    restore_run=True,
     save_partial=False,
     save_freq=10,
     use_tensorboard=True,
-    tensorboard_freq=1,
-    training_epochs=2,
+    tensorboard_freq=10,
+    training_epochs=100,
     batch_size=1)
+
+for i in range(1):     # len(val_feats)):
+    print('Predicted: {}'.format(LASLabel.from_index(network.predict(train_feats[i]))))
+    print('Target: {}'.format(LASLabel.from_index(train_labels[i])))

@@ -7,7 +7,7 @@ from src.neural_network.NetworkInterface import NetworkInterface
 from src.neural_network.data_conversion import padSequences
 from src.neural_network.LAS.LASNetData import LASNetData
 from src.neural_network.network_utils import bidirectional_pyramidal_rnn, attention_layer, dense_multilayer, \
-    attention_decoder
+    attention_decoder, beam_search_decoder, greedy_decoder
 from src.utils.LASLabel import LASLabel
 
 
@@ -33,6 +33,7 @@ class LASNet(NetworkInterface):
 
         self.listener_output = None
         self.listener_out_len = None
+        self.listener_state = None
 
         self.logits = None
         self.decoded_ids = None
@@ -95,7 +96,7 @@ class LASNet(NetworkInterface):
                     tensorboard_scope='dense_layer_1')
 
             with tf.name_scope("listener"):
-                self.listener_output, self.listener_out_len, listener_state = bidirectional_pyramidal_rnn(
+                self.listener_output, self.listener_out_len, self.listener_state = bidirectional_pyramidal_rnn(
                     input_ph=self.dense_layer_1_out,
                     seq_len_ph=self.input_features_length,
                     num_layers=self.network_data.listener_num_layers,
@@ -106,8 +107,6 @@ class LASNet(NetworkInterface):
                     tensorboard_scope="listener",
                     keep_prob=None)
 
-            self.output_projection = Dense(self.network_data.num_classes, name='output_projection')
-
             with tf.name_scope("attention"):
                 cell, decoder_initial_state = attention_layer(
                     input=self.listener_output,
@@ -117,19 +116,62 @@ class LASNet(NetworkInterface):
                     attention_units=self.network_data.attention_units,
                     lengths=self.listener_out_len,
                     batch_size=self.batch_size,
-                    input_state=listener_state)
+                    input_state=self.listener_state)
 
-                self.logits, self.decoded_ids, final_context_state = attention_decoder(
+                self.logits, _, _ = attention_decoder(
                     input_cell=cell,
                     initial_state=decoder_initial_state,
                     embedding=self.embedding,
                     seq_embedding=self.label_embedding,
                     seq_embedding_len=self.input_labels_length,
-                    output_projection=self.output_projection,
+                    output_projection=Dense(self.network_data.num_classes, name='attention_output_projection'),
                     max_iterations=self.max_label_length,
                     sampling_prob=0.5,
                     time_major=False,
-                    name="attention_decoder")
+                    name="attention")
+
+            with tf.name_scope("attention_decoder"):
+                tiled_listener_output = tf.contrib.seq2seq.tile_batch(self.listener_output,
+                                                                      multiplier=self.network_data.beam_width)
+                tiled_listener_state = tf.contrib.seq2seq.tile_batch(self.listener_state,
+                                                                     multiplier=self.network_data.beam_width)
+                tiled_listener_out_len = tf.contrib.seq2seq.tile_batch(self.listener_out_len,
+                                                                       multiplier=self.network_data.beam_width)
+                tiled_batch_size = self.batch_size * self.network_data.beam_width
+
+                tiled_cell, tiled_decoder_initial_state = attention_layer(
+                    input=tiled_listener_output,
+                    num_layers=self.network_data.attention_num_layers,
+                    rnn_units_list=list(map(lambda x: 2 * x, self.network_data.listener_num_units)),
+                    rnn_activations_list=self.network_data.attention_activation_list,
+                    attention_units=self.network_data.attention_units,
+                    lengths=tiled_listener_out_len,
+                    batch_size=tiled_batch_size,
+                    input_state=tiled_listener_state)
+
+                start_tokens = tf.fill([self.batch_size], self.network_data.sos_id)
+
+                if self.network_data.beam_width > 0:
+                    self.decoded_ids = beam_search_decoder(input_cell=tiled_cell, embedding=self.embedding,
+                                                           initial_state=tiled_decoder_initial_state,
+                                                           start_token=start_tokens,
+                                                           end_token=self.network_data.eos_id,
+                                                           beam_width=self.network_data.beam_width,
+                                                           output_layer=Dense(self.network_data.num_classes, name='tiled_attention_output_projection'),
+                                                           max_iterations=None,
+                                                           name="beam_search_decoder",
+                                                           time_major=False)
+                else:
+                    self.decoded_ids = greedy_decoder(input_cell=tiled_cell, embedding=self.embedding,
+                                                      initial_state=tiled_decoder_initial_state,
+                                                      start_token=start_tokens,
+                                                      end_token=self.network_data.eos_id,
+                                                      output_layer=Dense(self.network_data.num_classes, name='tiled_attention_output_projection'),
+                                                      max_iterations=None,
+                                                      name="greedy_decoder",
+                                                      time_major=False)
+
+
 
             with tf.name_scope("loss"):
                 target_weights = tf.sequence_mask(self.input_labels_length, self.max_label_length,
@@ -255,4 +297,21 @@ class LASNet(NetworkInterface):
         pass
 
     def predict(self, feature):
-        pass
+        feature = np.reshape(feature, [1, len(feature), np.shape(feature)[1]])
+        with tf.Session(graph=self.graph) as sess:
+            sess.run(tf.global_variables_initializer())
+            self.load_checkpoint(sess)
+
+            features, seq_len = padSequences(feature)
+
+            feed_dict = {
+                self.input_features: features,
+                self.input_features_length: seq_len,
+                self.tf_is_traing_pl: False
+            }
+
+            predicted = sess.run(self.decoded_ids, feed_dict=feed_dict)
+
+            sess.close()
+
+            return predicted[0][1]
