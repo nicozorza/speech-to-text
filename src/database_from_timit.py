@@ -2,9 +2,16 @@ import os
 import pickle
 from src.utils.AudioFeature import FeatureConfig, AudioFeature
 from src.utils.Database import DatabaseItem, Database
+from src.utils.LASLabel import LASLabel
+from src.utils.Label import Label
 from src.utils.OptimalLabel import OptimalLabel
 from src.utils.ClassicLabel import ClassicLabel
 from src.utils.ProjectData import ProjectData
+
+# Load project data
+project_data = ProjectData()
+
+wav_dirs = [project_data.WAV_TRAIN_DIR, project_data.WAV_TEST_DIR]
 
 # Configuration of the features
 feature_config = FeatureConfig()
@@ -16,12 +23,14 @@ feature_config.preemph = 0.98
 feature_config.num_filters = 40
 feature_config.num_ceps = 26
 
-label_type = "classic"  # "optim"
+label_type = "las"  # "classic", "las", "optim"
 
-# Load project data
-project_data = ProjectData()
-
-wav_dirs = [project_data.WAV_TRAIN_DIR, project_data.WAV_TEST_DIR]
+if label_type == "classic":
+    label_class = ClassicLabel
+elif label_type == "las":
+    label_class = LASLabel
+else:
+    label_class = OptimalLabel
 
 for wav_dir in wav_dirs:
     database = Database(project_data)
@@ -46,7 +55,7 @@ for wav_dir in wav_dirs:
             # delete numbers in the beginning, etc.
             transcription = (' '.join(transcription.strip().lower().split(' ')[2:]).replace('.', ''))
 
-        label = ClassicLabel(transcription) if label_type == "classic" else OptimalLabel(transcription)
+        label = label_class(transcription)
 
         # Create database item
         item = DatabaseItem(audio_feature, label)

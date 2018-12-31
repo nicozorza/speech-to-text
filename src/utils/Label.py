@@ -3,6 +3,9 @@ import numpy as np
 
 class Label:
 
+    def __init__(self, transcription: str):
+        raise NotImplemented("transcription() not implemented")
+
     @property
     def transcription(self) -> str:
         raise NotImplemented("transcription() not implemented")
