@@ -304,3 +304,33 @@ def attention_layer(input, num_layers: int, rnn_units_list: List[int], rnn_activ
     if input_state is not None:
         state = state.clone(cell_state=input_state)
     return cell, state
+
+
+def attention_decoder(input_cell, initial_state, embedding, seq_embedding, seq_embedding_len,
+                      output_projection, max_iterations, sampling_prob, time_major, name):
+    # TODO Ver tf.contrib.legacy_seq2seq.attention_decoder para ver si es mejor que hacerlo a mano
+    helper = tf.contrib.seq2seq.ScheduledEmbeddingTrainingHelper(
+        inputs=seq_embedding,
+        sequence_length=seq_embedding_len,
+        embedding=embedding,
+        sampling_probability=sampling_prob,
+        time_major=time_major)
+
+    decoder = tf.contrib.seq2seq.BasicDecoder(cell=input_cell,
+                                              helper=helper,
+                                              initial_state=initial_state,
+                                              output_layer=output_projection)
+
+    outputs, final_context_state, _ = tf.contrib.seq2seq.dynamic_decode(
+        decoder=decoder,
+        output_time_major=time_major,
+        maximum_iterations=max_iterations,
+        swap_memory=False,
+        impute_finished=True,
+        scope=name
+    )
+
+    sample_id = outputs.sample_id
+    logits = outputs.rnn_output
+
+    return logits, sample_id, final_context_state

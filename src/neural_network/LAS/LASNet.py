@@ -6,7 +6,8 @@ from tensorflow.python.layers.core import Dense
 from src.neural_network.NetworkInterface import NetworkInterface
 from src.neural_network.data_conversion import padSequences
 from src.neural_network.LAS.LASNetData import LASNetData
-from src.neural_network.network_utils import bidirectional_pyramidal_rnn, attention_layer, dense_multilayer
+from src.neural_network.network_utils import bidirectional_pyramidal_rnn, attention_layer, dense_multilayer, \
+    attention_decoder
 from src.utils.LASLabel import LASLabel
 
 
@@ -34,6 +35,7 @@ class LASNet(NetworkInterface):
         self.listener_out_len = None
 
         self.logits = None
+        self.decoded_ids = None
 
         self.loss = None
         self.train_op = None
@@ -104,8 +106,30 @@ class LASNet(NetworkInterface):
                     tensorboard_scope="listener",
                     keep_prob=None)
 
-            # Decoder
-            self.logits, sample_id, final_context_state = self.build_decoder(self.listener_output, listener_state)
+            self.output_projection = Dense(self.network_data.num_classes, name='output_projection')
+
+            with tf.name_scope("attention"):
+                cell, decoder_initial_state = attention_layer(
+                    input=self.listener_output,
+                    num_layers=self.network_data.attention_num_layers,
+                    rnn_units_list=list(map(lambda x: 2 * x, self.network_data.listener_num_units)),
+                    rnn_activations_list=self.network_data.attention_activation_list,
+                    attention_units=self.network_data.attention_units,
+                    lengths=self.listener_out_len,
+                    batch_size=self.batch_size,
+                    input_state=listener_state)
+
+                self.logits, self.decoded_ids, final_context_state = attention_decoder(
+                    input_cell=cell,
+                    initial_state=decoder_initial_state,
+                    embedding=self.embedding,
+                    seq_embedding=self.label_embedding,
+                    seq_embedding_len=self.input_labels_length,
+                    output_projection=self.output_projection,
+                    max_iterations=self.max_label_length,
+                    sampling_prob=0.5,
+                    time_major=False,
+                    name="attention_decoder")
 
             with tf.name_scope("loss"):
                 target_weights = tf.sequence_mask(self.input_labels_length, self.max_label_length,
@@ -122,51 +146,6 @@ class LASNet(NetworkInterface):
 
             self.checkpoint_saver = tf.train.Saver(save_relative_paths=True)
             self.merged_summary = tf.summary.merge_all()
-
-    def build_decoder(self, encoder_outputs, encoder_state):
-
-        self.output_projection = Dense(self.network_data.num_classes, name='output_projection')
-
-        # Decoder.
-        with tf.variable_scope("decoder") as decoder_scope:
-            cell, decoder_initial_state = attention_layer(
-                input=encoder_outputs,
-                num_layers=self.network_data.attention_num_layers,
-                rnn_units_list=list(map(lambda x: 2*x, self.network_data.listener_num_units)),
-                rnn_activations_list=self.network_data.attention_activation_list,
-                attention_units=self.network_data.attention_units,
-                lengths=self.input_features_length,
-                batch_size=self.batch_size,
-                input_state=encoder_state)
-
-            # Train
-            helper = tf.contrib.seq2seq.ScheduledEmbeddingTrainingHelper(
-                inputs=self.label_embedding,
-                sequence_length=self.input_labels_length,
-                embedding=self.embedding,
-                sampling_probability=0.5,
-                time_major=False)
-
-            # Decoder
-            my_decoder = tf.contrib.seq2seq.BasicDecoder(cell,
-                                                         helper,
-                                                         decoder_initial_state,
-                                                         output_layer=self.output_projection)
-
-            # Dynamic decoding
-            outputs, final_context_state, _ = tf.contrib.seq2seq.dynamic_decode(
-                my_decoder,
-                output_time_major=False,
-                maximum_iterations=self.max_label_length,
-                swap_memory=False,
-                impute_finished=True,
-                scope=decoder_scope
-            )
-
-            sample_id = outputs.sample_id
-            logits = outputs.rnn_output
-
-        return logits, sample_id, final_context_state
 
     def train(self,
               train_features,
