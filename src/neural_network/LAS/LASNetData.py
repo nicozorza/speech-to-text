@@ -6,6 +6,10 @@ class LASNetData(NetworkDataInterface):
     def __init__(self):
 
         self.num_embeddings = None
+        self.sos_id = None
+        self.eos_id = None
+
+        self.beam_width = None
 
         self.num_dense_layers_1: int = None
         self.num_units_1: List[int] = list()
@@ -19,5 +23,11 @@ class LASNetData(NetworkDataInterface):
         self.listener_num_units: List[int] = None
         self.listener_activation_list: List[int] = None
         self.listener_keep_prob_list: List[float] = None
+
+        self.attention_num_layers: int = None
+        self.attention_units: int = None
+        self.attention_rnn_units: List[int] = None
+        self.attention_activation_list: List[int] = None
+        self.attention_keep_prob_list: List[float] = None
 
 

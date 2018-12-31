@@ -289,3 +289,18 @@ def attention_cell(input, num_layers: int, rnn_units_list: List[int], rnn_activa
                                                attention_mechanism=attention_mechanism,
                                                attention_layer_size=None,
                                                output_attention=False)
+
+
+def attention_layer(input, num_layers: int, rnn_units_list: List[int], rnn_activations_list,
+                    attention_units, lengths, batch_size, input_state=None):
+    cell = attention_cell(input=input,
+                          num_layers=num_layers,
+                          rnn_units_list=rnn_units_list,
+                          rnn_activations_list=rnn_activations_list,
+                          attention_units=attention_units,
+                          lengths=lengths)
+
+    state = cell.zero_state(batch_size, tf.float32)
+    if input_state is not None:
+        state = state.clone(cell_state=input_state)
+    return cell, state
