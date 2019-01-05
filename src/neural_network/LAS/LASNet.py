@@ -42,8 +42,6 @@ class LASNet(NetworkInterface):
         self.loss = None
         self.train_op = None
 
-        self.output_projection = None
-
         self.merged_summary = None
 
     def create_graph(self):
@@ -174,6 +172,8 @@ class LASNet(NetworkInterface):
                                                            max_iterations=self.max_features_length,
                                                            name="attention",
                                                            time_major=False)
+                    self.decoded_ids = self.decoded_ids[:, :, 0]    # Most probable beam
+
                 else:
                     self.decoded_ids = greedy_decoder(input_cell=tiled_cell, embedding=self.embedding,
                                                       initial_state=tiled_decoder_initial_state,
@@ -322,4 +322,4 @@ class LASNet(NetworkInterface):
             predicted = sess.run(self.decoded_ids, feed_dict=feed_dict)
 
             sess.close()
-            return predicted[0][:, 0]
+            return predicted[0]
