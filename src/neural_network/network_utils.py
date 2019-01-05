@@ -200,13 +200,13 @@ def bidirectional_pyramidal_rnn(input_ph, seq_len_ph, num_layers: int, num_units
         initial_state_fw = state_fw
         initial_state_bw = state_bw
 
+        if use_tensorboard:
+            tf.summary.histogram(tensorboard_scope, input_ph)
+
     bi_state_c = tf.concat((initial_state_fw.c, initial_state_fw.c), -1)
     bi_state_h = tf.concat((initial_state_fw.h, initial_state_fw.h), -1)
     bi_lstm_state = tf.nn.rnn_cell.LSTMStateTuple(c=bi_state_c, h=bi_state_h)
     state = tuple([bi_lstm_state] * num_layers)
-
-    if use_tensorboard:
-        tf.summary.histogram(tensorboard_scope, input_ph)
 
     return input_ph, seq_len_ph, state
 
