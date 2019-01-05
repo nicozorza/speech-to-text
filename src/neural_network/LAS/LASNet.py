@@ -185,12 +185,27 @@ class LASNet(NetworkInterface):
                                                       time_major=False)
 
             with tf.name_scope("loss"):
+                kernel_loss = 0
+                for var in tf.trainable_variables():
+                    if var.name.startswith('dense_layer') and 'kernel' in var.name:
+                        kernel_loss += tf.nn.l2_loss(var)
+
+                for var in tf.trainable_variables():
+                    if var.name.startswith('listener') and 'kernel' in var.name:
+                        kernel_loss += tf.nn.l2_loss(var)
+
+                for var in tf.trainable_variables():
+                    if var.name.startswith('attention') and 'kernel' in var.name:
+                        kernel_loss += tf.nn.l2_loss(var)
+
                 target_weights = tf.sequence_mask(self.input_labels_length, self.max_label_length,
                                                   dtype=tf.float32, name='mask')
 
-                self.loss = tf.contrib.seq2seq.sequence_loss(logits=self.logits, targets=self.input_labels,
-                                                             weights=target_weights, average_across_timesteps=True,
-                                                             average_across_batch=True)
+                sequence_loss = tf.contrib.seq2seq.sequence_loss(logits=self.logits, targets=self.input_labels,
+                                                                 weights=target_weights, average_across_timesteps=True,
+                                                                 average_across_batch=True)
+
+                self.loss = sequence_loss + self.network_data.kernel_regularizer * kernel_loss
 
             with tf.name_scope("training_op"):
                 self.train_op = self.network_data.optimizer.minimize(self.loss)

@@ -30,4 +30,6 @@ class LASNetData(NetworkDataInterface):
         self.attention_activation_list: List[int] = None
         self.attention_keep_prob_list: List[float] = None
 
+        self.kernel_regularizer: float = None
+
 
