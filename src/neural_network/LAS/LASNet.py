@@ -41,6 +41,7 @@ class LASNet(NetworkInterface):
 
         self.loss = None
         self.train_op = None
+        self.ler = None
 
         self.merged_summary = None
 
@@ -163,26 +164,29 @@ class LASNet(NetworkInterface):
                 start_tokens = tf.fill([self.batch_size], self.network_data.sos_id)
 
                 if self.network_data.beam_width > 0:
-                    self.decoded_ids = beam_search_decoder(input_cell=tiled_cell, embedding=self.embedding,
-                                                           initial_state=tiled_decoder_initial_state,
-                                                           start_token=start_tokens,
-                                                           end_token=self.network_data.eos_id,
-                                                           beam_width=self.network_data.beam_width,
-                                                           output_layer=Dense(self.network_data.num_classes),
-                                                           max_iterations=self.max_features_length,
-                                                           name="attention",
-                                                           time_major=False)
-                    self.decoded_ids = self.decoded_ids[:, :, 0]    # Most probable beam
-
-                else:
-                    self.decoded_ids = greedy_decoder(input_cell=tiled_cell, embedding=self.embedding,
+                    decoded_ids = beam_search_decoder(input_cell=tiled_cell, embedding=self.embedding,
                                                       initial_state=tiled_decoder_initial_state,
                                                       start_token=start_tokens,
                                                       end_token=self.network_data.eos_id,
+                                                      beam_width=self.network_data.beam_width,
                                                       output_layer=Dense(self.network_data.num_classes),
-                                                      max_iterations=None,
+                                                      max_iterations=self.max_features_length,
                                                       name="attention",
                                                       time_major=False)
+                    decoded_ids = decoded_ids[:, :, 0]    # Most probable beam
+
+                else:
+                    decoded_ids = greedy_decoder(input_cell=tiled_cell, embedding=self.embedding,
+                                                 initial_state=tiled_decoder_initial_state,
+                                                 start_token=start_tokens,
+                                                 end_token=self.network_data.eos_id,
+                                                 output_layer=Dense(self.network_data.num_classes),
+                                                 max_iterations=None,
+                                                 name="attention",
+                                                 time_major=False)
+
+            with tf.name_scope('decoded_ids'):
+                self.decoded_ids = tf.identity(decoded_ids, name='decoded_ids')
 
             with tf.name_scope("loss"):
                 kernel_loss = 0
@@ -206,6 +210,14 @@ class LASNet(NetworkInterface):
                                                                  average_across_batch=True)
 
                 self.loss = sequence_loss + self.network_data.kernel_regularizer * kernel_loss
+                tf.summary.scalar('sequence_loss', sequence_loss)
+                tf.summary.scalar('loss', self.loss)
+
+            with tf.name_scope("label_error_rate"):
+                self.ler = tf.reduce_mean(tf.edit_distance(hypothesis=tf.contrib.layers.dense_to_sparse(tf.cast(self.decoded_ids, tf.int32)),
+                                                           truth=tf.contrib.layers.dense_to_sparse(self.input_labels),
+                                                           normalize=True))
+                tf.summary.scalar('label_error_rate', tf.reduce_mean(self.ler))
 
             with tf.name_scope("training_op"):
                 self.train_op = self.network_data.optimizer.minimize(self.loss)
@@ -238,11 +250,11 @@ class LASNet(NetworkInterface):
                 train_writer.add_graph(sess.graph)
 
             loss_ep = 0
-            # ler_ep = 0
+            ler_ep = 0
             for epoch in range(training_epochs):
                 epoch_time = time.time()
                 loss_ep = 0
-                # ler_ep = 0
+                ler_ep = 0
                 n_step = 0
 
                 database = list(zip(train_features, train_labels))
@@ -262,13 +274,13 @@ class LASNet(NetworkInterface):
                         self.input_labels_length: batch_train_labels_len
                     }
 
-                    loss, _ = sess.run([self.loss, self.train_op], feed_dict=feed_dict)
+                    loss, _, ler = sess.run([self.loss, self.train_op, self.ler], feed_dict=feed_dict)
 
                     loss_ep += loss
-                    # ler_ep += ler
+                    ler_ep += ler
                     n_step += 1
                 loss_ep = loss_ep / n_step
-                # ler_ep = ler_ep / n_step
+                ler_ep = ler_ep / n_step
 
                 if use_tensorboard:
                     if epoch % tensorboard_freq == 0 and self.network_data.tensorboard_path is not None:
@@ -305,7 +317,7 @@ class LASNet(NetworkInterface):
                       (epoch + 1,
                        training_epochs,
                        loss_ep,
-                       0,
+                       ler_ep,
                        (time.time()-epoch_time)/60,
                        (training_epochs-epoch-1)*(time.time()-epoch_time)/60))
 
