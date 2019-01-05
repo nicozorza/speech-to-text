@@ -53,6 +53,9 @@ def dense_multilayer(input_ph, num_layers: int, num_units: List[int], name: str,
     if bias_initializers is None:
         bias_initializers = [None] * num_layers
 
+    if keep_prob_list is None:
+        keep_prob_list = [1] * num_layers
+
     for _ in range(num_layers):
         input_ph = dense_layer(input_ph=input_ph,
                                num_units=num_units[_],
