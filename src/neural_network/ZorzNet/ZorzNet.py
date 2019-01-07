@@ -97,11 +97,11 @@ class ZorzNet(NetworkInterface):
                         tensorboard_scope='RNN',
                         output_size=self.network_data.rnn_output_sizes)
 
-            with tf.name_scope("dense_layers_2"):
+            with tf.name_scope("dense_layer_2"):
                 self.rnn_outputs = dense_multilayer(input_ph=self.rnn_outputs,
                                                     num_layers=self.network_data.num_dense_layers_2,
                                                     num_units=self.network_data.num_units_2,
-                                                    name='dense_layers_2',
+                                                    name='dense_layer_2',
                                                     activation_list=self.network_data.dense_activations_2,
                                                     use_batch_normalization=self.network_data.batch_normalization_2,
                                                     train_ph=self.tf_is_traing_pl,
@@ -109,7 +109,7 @@ class ZorzNet(NetworkInterface):
                                                     keep_prob_list=self.network_data.keep_prob_2,
                                                     kernel_initializers=self.network_data.kernel_init_2,
                                                     bias_initializers=self.network_data.bias_init_2,
-                                                    tensorboard_scope='dense_layers_2')
+                                                    tensorboard_scope='dense_layer_2')
 
             with tf.name_scope("dense_output"):
                 self.dense_output_no_activation = dense_layer(input_ph=self.rnn_outputs,
