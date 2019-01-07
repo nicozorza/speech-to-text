@@ -132,22 +132,17 @@ class LASNet(NetworkInterface):
                     name="attention")
 
             with tf.name_scope("tile_batch"):
-                tiled_listener_output = tf.cond(
-                    pred=tf.less(0, self.network_data.beam_width),
-                    true_fn=lambda: tf.contrib.seq2seq.tile_batch(self.listener_output, multiplier=self.network_data.beam_width),
-                    false_fn=lambda: self.listener_output)
-                tiled_listener_state = tf.cond(
-                    pred=tf.less(0, self.network_data.beam_width),
-                    true_fn=lambda: tf.contrib.seq2seq.tile_batch(self.listener_state, multiplier=self.network_data.beam_width),
-                    false_fn=lambda: self.listener_state)
-                tiled_listener_out_len = tf.cond(
-                    pred=tf.less(0, self.network_data.beam_width),
-                    true_fn=lambda: tf.contrib.seq2seq.tile_batch(self.listener_out_len, multiplier=self.network_data.beam_width),
-                    false_fn=lambda: self.listener_out_len)
-                tiled_batch_size = tf.cond(
-                    pred=tf.less(0, self.network_data.beam_width),
-                    true_fn=lambda: self.batch_size * self.network_data.beam_width,
-                    false_fn=lambda: self.batch_size)
+                if self.network_data.beam_width > 0:
+                    tiled_listener_output = tf.contrib.seq2seq.tile_batch(self.listener_output, multiplier=self.network_data.beam_width)
+                    tiled_listener_state = tf.contrib.seq2seq.tile_batch(self.listener_state, multiplier=self.network_data.beam_width)
+                    tiled_listener_out_len = tf.contrib.seq2seq.tile_batch(self.listener_out_len, multiplier=self.network_data.beam_width)
+                    tiled_batch_size = self.batch_size * self.network_data.beam_width
+
+                else:
+                    tiled_listener_output = self.listener_output
+                    tiled_listener_state = self.listener_state
+                    tiled_listener_out_len = self.listener_out_len
+                    tiled_batch_size = self.batch_size
 
             with tf.variable_scope("attention", reuse=True):
 
@@ -159,7 +154,7 @@ class LASNet(NetworkInterface):
                     attention_units=self.network_data.attention_units,
                     lengths=tiled_listener_out_len,
                     batch_size=tiled_batch_size,
-                    input_state=tiled_listener_state)
+                    input_state=tuple(tiled_listener_state))
 
                 start_tokens = tf.fill([self.batch_size], self.network_data.sos_id)
 
