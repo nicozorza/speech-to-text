@@ -176,7 +176,7 @@ class LASNet(NetworkInterface):
                                                  start_token=start_tokens,
                                                  end_token=self.network_data.eos_id,
                                                  output_layer=Dense(self.network_data.num_classes),
-                                                 max_iterations=None,
+                                                 max_iterations=self.max_features_length,
                                                  name="attention",
                                                  time_major=False)
 
