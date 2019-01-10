@@ -42,6 +42,7 @@ class LASNet(NetworkInterface):
         self.loss = None
         self.train_op = None
         self.ler = None
+        self.train_ler = None
 
         self.merged_summary = None
 
@@ -209,10 +210,17 @@ class LASNet(NetworkInterface):
                 tf.summary.scalar('loss', self.loss)
 
             with tf.name_scope("label_error_rate"):
-                self.ler = tf.reduce_mean(tf.edit_distance(hypothesis=tf.contrib.layers.dense_to_sparse(tf.cast(self.decoded_ids, tf.int32)),
-                                                           truth=tf.contrib.layers.dense_to_sparse(self.input_labels),
-                                                           normalize=True))
+                train_decoded_ids = tf.argmax(tf.nn.softmax(self.logits, axis=2), axis=2)
+                self.train_ler = tf.reduce_mean(tf.edit_distance(
+                    hypothesis=tf.contrib.layers.dense_to_sparse(tf.cast(train_decoded_ids, tf.int32)),
+                    truth=tf.contrib.layers.dense_to_sparse(self.input_labels),
+                    normalize=True))
+                self.ler = tf.reduce_mean(tf.edit_distance(
+                    hypothesis=tf.contrib.layers.dense_to_sparse(tf.cast(self.decoded_ids, tf.int32)),
+                    truth=tf.contrib.layers.dense_to_sparse(self.input_labels),
+                    normalize=True))
                 tf.summary.scalar('label_error_rate', tf.reduce_mean(self.ler))
+                tf.summary.scalar('train_label_error_rate', tf.reduce_mean(self.train_ler))
 
             with tf.name_scope("training_op"):
                 self.train_op = self.network_data.optimizer.minimize(self.loss)
@@ -269,7 +277,7 @@ class LASNet(NetworkInterface):
                         self.input_labels_length: batch_train_labels_len
                     }
 
-                    loss, _, ler = sess.run([self.loss, self.train_op, self.ler], feed_dict=feed_dict)
+                    loss, _, ler = sess.run([self.loss, self.train_op, self.train_ler], feed_dict=feed_dict)
 
                     loss_ep += loss
                     ler_ep += ler
