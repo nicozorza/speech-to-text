@@ -19,6 +19,20 @@ class FeatureConfig:
         self.highfreq: float = None
         self.preemph: float = 0.98
 
+        self.mfcc_window = np.hamming
+        # Las posibles ventanas para los MFCC son:
+        # np.hamming, np.hanning, np.kaiser, np.blackman, np.bartlett
+
+        self.spec_window: str = 'hann'
+        # Las posibles ventanas para el espectograma son:
+        # `boxcar`, `triang`, `blackman`, `hamming`, `hann`, `bartlett`,
+        # `flattop`, `parzen`, `bohman`, `blackmanharris`, `nuttall`,
+        # `barthann`, `kaiser` (needs beta), `gaussian` (needs standard
+        # deviation), `general_gaussian` (needs power, width), `slepian`
+        # (needs width), `dpss` (needs normalized half-bandwidth),
+        # `chebwin` (needs attenuation), `exponential` (needs decay scale),
+        # `tukey` (needs taper fraction)
+
 
 class AudioFeature:
     def __init__(self):
@@ -38,17 +52,18 @@ class AudioFeature:
         return self.__fs
 
     def mfcc(self, audio, fs: float, winlen: float, winstep: float, numcep: int,
-             nfilt: int, nfft: int, lowfreq, highfreq, preemph: float) -> np.ndarray:
+             nfilt: int, nfft: int, lowfreq, highfreq, preemph: float, winfunc) -> np.ndarray:
 
         return features.mfcc(audio, samplerate=fs, winlen=winlen, winstep=winstep, numcep=numcep,
-                             nfilt=nfilt, nfft=nfft, lowfreq=lowfreq, highfreq=highfreq, preemph=preemph)
+                             nfilt=nfilt, nfft=nfft, lowfreq=lowfreq, highfreq=highfreq,
+                             preemph=preemph, winfunc=winfunc)
 
-    def specgram(self, audio, fs, nfft=1024, window_size=20, step_size=10, eps=1e-10):
+    def specgram(self, audio, fs, nfft=1024, window_size=20, step_size=10, eps=1e-10, window: str='hann'):
         nperseg = int(round(window_size * fs / 1e3))
         noverlap = int(round(step_size * fs / 1e3))
         freqs, times, spec = signal.spectrogram(audio,
                                                 fs=fs,
-                                                window='hann',
+                                                window=window,
                                                 nperseg=nperseg,
                                                 noverlap=noverlap,
                                                 detrend=False,
@@ -56,9 +71,9 @@ class AudioFeature:
         return freqs, times, spec.T.astype(np.float32)
 
     def log_specgram(self, audio, fs, nfft=1024, window_size=20,
-                     step_size=10, eps=1e-10) -> Tuple[np.ndarray, np.ndarray, None]:
+                     step_size=10, eps=1e-10, window='hann') -> Tuple[np.ndarray, np.ndarray, None]:
 
-        freqs, times, spec = self.specgram(audio, fs, nfft, window_size, step_size, eps)
+        freqs, times, spec = self.specgram(audio, fs, nfft, window_size, step_size, eps, window)
 
         return freqs, times, np.log(spec + eps)
 
@@ -101,7 +116,9 @@ class AudioFeature:
                 fs=fs,
                 nfft=feature_config.nfft,
                 window_size=feature_config.winlen,
-                step_size=feature_config.winstride)
+                step_size=feature_config.winstride,
+                window=feature_config.spec_window
+            )
         elif feature_config.feature_type is 'mfcc':
             feature.num_features = feature_config.num_ceps
             if feature_config.highfreq is None:
@@ -116,7 +133,8 @@ class AudioFeature:
                 lowfreq=feature_config.lowfreq,
                 highfreq=feature_config.highfreq,
                 preemph=feature_config.preemph,
-                nfilt=feature_config.num_filters)
+                nfilt=feature_config.num_filters,
+                winfunc=feature_config.mfcc_window)
         else:
             raise ValueError("Wrong feature type. Only MFCC and spectogram are available.")
 
