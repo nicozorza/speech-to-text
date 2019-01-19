@@ -5,6 +5,7 @@ from src.utils.Database import DatabaseItem, Database
 from src.utils.OptimalLabel import OptimalLabel
 from src.utils.ClassicLabel import ClassicLabel
 from src.utils.ProjectData import ProjectData
+import numpy as np
 
 # Configuration of the features
 feature_config = FeatureConfig()
@@ -15,6 +16,7 @@ feature_config.winstride = 10
 feature_config.preemph = 0.98
 feature_config.num_filters = 40
 feature_config.num_ceps = 26
+feature_config.winfunc = np.hamming
 
 label_type = "classic"  # "optim"
 

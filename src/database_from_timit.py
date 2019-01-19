@@ -7,6 +7,7 @@ from src.utils.Label import Label
 from src.utils.OptimalLabel import OptimalLabel
 from src.utils.ClassicLabel import ClassicLabel
 from src.utils.ProjectData import ProjectData
+import numpy as np
 
 # Load project data
 project_data = ProjectData()
@@ -22,6 +23,7 @@ feature_config.winstride = 10
 feature_config.preemph = 0.98
 feature_config.num_filters = 40
 feature_config.num_ceps = 26
+feature_config.mfcc_window = np.hamming
 
 label_type = "las"  # "classic", "las", "optim"
 
