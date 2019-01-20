@@ -7,7 +7,7 @@ from typing import Tuple
 
 class FeatureConfig:
     def __init__(self):
-        self.feature_type: str = 'mfcc'     # 'spec', 'log_spec'
+        self.feature_type: str = 'mfcc'     # 'spec', 'log_spec', 'deep_speech_mfcc'
         self.nfft: int = 1024
         self.winlen: int = 20
         self.winstride: int = 10
@@ -32,6 +32,8 @@ class FeatureConfig:
         # (needs width), `dpss` (needs normalized half-bandwidth),
         # `chebwin` (needs attenuation), `exponential` (needs decay scale),
         # `tukey` (needs taper fraction)
+
+        self.num_context: int = 9   # Cantidad de features de contexto (ver DeepSpeech)
 
 
 class AudioFeature:
@@ -58,7 +60,39 @@ class AudioFeature:
                              nfilt=nfilt, nfft=nfft, lowfreq=lowfreq, highfreq=highfreq,
                              preemph=preemph, winfunc=winfunc)
 
-    def specgram(self, audio, fs, nfft=1024, window_size=20, step_size=10, eps=1e-10, window: str='hann'):
+    def deep_speech_mfcc(self, audio, fs: float, winlen: float, winstep: float, numcep: int,
+                         nfilt: int, nfft: int, lowfreq, highfreq, preemph: float, winfunc,
+                         num_context: int) -> np.ndarray:
+
+        features = self.mfcc(audio, fs=fs, winlen=winlen, winstep=winstep, numcep=numcep,
+                             nfilt=nfilt, nfft=nfft, lowfreq=lowfreq, highfreq=highfreq,
+                             preemph=preemph, winfunc=winfunc)
+
+        # We only keep every second feature (BiRNN stride = 2)
+        features = features[::2]
+
+        num_strides = len(features)
+
+        empty_context = np.zeros((num_context, numcep), dtype=features.dtype)
+
+        features = np.concatenate((empty_context, features, empty_context))
+
+        window_size = 2 * num_context + 1
+        strided_features = np.lib.stride_tricks.as_strided(
+            features,
+            (num_strides, window_size, numcep),
+            (features.strides[0], features.strides[0], features.strides[1]),
+            writeable=False)
+
+        strided_features = np.reshape(strided_features, [num_strides, -1])
+
+        # Copy the strided array so that we can write to it safely
+        strided_features = np.copy(strided_features)
+        strided_features = (strided_features - np.mean(strided_features)) / np.std(strided_features)
+
+        return strided_features
+
+    def specgram(self, audio, fs, nfft=1024, window_size=20, step_size=10, eps=1e-10, window: str = 'hann'):
         nperseg = int(round(window_size * fs / 1e3))
         noverlap = int(round(step_size * fs / 1e3))
         freqs, times, spec = signal.spectrogram(audio,
@@ -135,6 +169,26 @@ class AudioFeature:
                 preemph=feature_config.preemph,
                 nfilt=feature_config.num_filters,
                 winfunc=feature_config.mfcc_window)
+
+        elif feature_config.feature_type is 'deep_speech_mfcc':
+            feature.num_features = feature_config.num_ceps
+            if feature_config.highfreq is None:
+                feature_config.highfreq = fs / 2
+            feature.__feature = feature.deep_speech_mfcc(
+                audio=audio,
+                fs=fs,
+                numcep=feature_config.num_ceps,
+                winlen=feature_config.winlen / 1000,
+                winstep=feature_config.winstride / 1000,
+                nfft=feature_config.nfft,
+                lowfreq=feature_config.lowfreq,
+                highfreq=feature_config.highfreq,
+                preemph=feature_config.preemph,
+                nfilt=feature_config.num_filters,
+                winfunc=feature_config.mfcc_window,
+                num_context=feature_config.num_context
+            )
+
         else:
             raise ValueError("Wrong feature type. Only MFCC and spectogram are available.")
 
