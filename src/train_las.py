@@ -45,10 +45,14 @@ network_data.attention_keep_prob_list = [0.9] * network_data.attention_num_layer
 network_data.kernel_regularizer = 0.0
 network_data.clip_norm = 5
 
-network_data.learning_rate = 0.000001
+network_data.learning_rate = 0.0001
 network_data.adam_epsilon = 0.0001
-network_data.optimizer = tf.train.AdamOptimizer(learning_rate=network_data.learning_rate,beta1=0.7, beta2=0.99)
-                                                # epsilon=network_data.adam_epsilon)
+network_data.adam_beta1 = 0.7
+network_data.adam_beta2 = 0.99
+network_data.use_learning_rate_decay = True
+network_data.learning_rate_decay_steps = 50
+network_data.learning_rate_decay = 0.96
+
 ###########################################################################################################
 
 network = LASNet(network_data)
@@ -63,18 +67,15 @@ train_feats, train_labels = train_database.to_set()
 train_feats = train_feats[0:10]
 train_labels = train_labels[0:10]
 
-print(LASLabel.from_index(train_labels[0]))
-print(train_labels[0])
-
 network.train(
     train_features=train_feats,
     train_labels=train_labels,
-    restore_run=False,
+    restore_run=True,
     save_partial=True,
     save_freq=10,
     use_tensorboard=True,
     tensorboard_freq=1,
-    training_epochs=1,
+    training_epochs=50,
     batch_size=1)
 
 for i in range(5):#range(len(train_feats)):     # len(val_feats)):

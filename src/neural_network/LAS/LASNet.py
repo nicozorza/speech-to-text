@@ -28,6 +28,7 @@ class LASNet(NetworkInterface):
         self.batch_size = None
 
         self.global_step = None
+        self.learning_rate = None
 
         self.embedding = None
         self.label_embedding = None
@@ -234,8 +235,21 @@ class LASNet(NetworkInterface):
                 tf.summary.scalar('train_label_error_rate', tf.reduce_mean(self.train_ler))
 
             with tf.name_scope("training_op"):
+                if self.network_data.use_learning_rate_decay:
+                    self.learning_rate = tf.train.exponential_decay(
+                        self.network_data.learning_rate,
+                        self.global_step,
+                        decay_steps=self.network_data.learning_rate_decay_steps,
+                        decay_rate=self.network_data.learning_rate_decay,
+                        staircase=True)
+                else:
+                    self.learning_rate = self.network_data.learning_rate
 
-                opt = self.network_data.optimizer
+                opt = tf.train.AdamOptimizer(learning_rate=self.learning_rate,
+                                             beta1=self.network_data.adam_beta1,
+                                             beta2=self.network_data.adam_beta2,
+                                             epsilon=self.network_data.adam_epsilon)
+
                 if self.network_data.clip_norm > 0:
                     grads, vs = zip(*opt.compute_gradients(self.loss))
                     grads, _ = tf.clip_by_global_norm(grads, self.network_data.clip_norm)
