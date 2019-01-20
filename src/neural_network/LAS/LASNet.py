@@ -27,6 +27,8 @@ class LASNet(NetworkInterface):
         self.max_label_length = None
         self.batch_size = None
 
+        self.global_step = None
+
         self.embedding = None
         self.label_embedding = None
 
@@ -71,6 +73,7 @@ class LASNet(NetworkInterface):
             self.max_label_length = tf.reduce_max(self.input_labels_length, name='max_label_length')
             self.max_features_length = tf.reduce_max(self.input_features_length, name='max_features_length')
             self.batch_size = tf.shape(self.input_features)[0]
+            self.global_step = tf.Variable(0, trainable=False, name='global_step')
 
             with tf.name_scope("embeddings"):
                 self.embedding = tf.get_variable(name='embedding',
@@ -107,7 +110,8 @@ class LASNet(NetworkInterface):
                     activation_list=self.network_data.listener_activation_list,
                     use_tensorboard=True,
                     tensorboard_scope="listener",
-                    keep_prob=None)
+                    keep_prob=self.network_data.listener_keep_prob_list,
+                    train_ph=self.tf_is_traing_pl)
 
             with tf.variable_scope("attention"):
                 cell, decoder_initial_state = attention_layer(
@@ -118,7 +122,9 @@ class LASNet(NetworkInterface):
                     attention_units=self.network_data.attention_units,
                     lengths=self.listener_out_len,
                     batch_size=self.batch_size,
-                    input_state=self.listener_state)
+                    input_state=self.listener_state,
+                    keep_prob=self.network_data.attention_keep_prob_list,
+                    train_ph=self.tf_is_traing_pl)
 
                 self.logits, _, _ = attention_decoder(
                     input_cell=cell,
@@ -134,9 +140,12 @@ class LASNet(NetworkInterface):
 
             with tf.name_scope("tile_batch"):
                 if self.network_data.beam_width > 0:
-                    tiled_listener_output = tf.contrib.seq2seq.tile_batch(self.listener_output, multiplier=self.network_data.beam_width)
-                    tiled_listener_state = tf.contrib.seq2seq.tile_batch(self.listener_state, multiplier=self.network_data.beam_width)
-                    tiled_listener_out_len = tf.contrib.seq2seq.tile_batch(self.listener_out_len, multiplier=self.network_data.beam_width)
+                    tiled_listener_output = tf.contrib.seq2seq.tile_batch(
+                        self.listener_output, multiplier=self.network_data.beam_width)
+                    tiled_listener_state = tf.contrib.seq2seq.tile_batch(
+                        self.listener_state, multiplier=self.network_data.beam_width)
+                    tiled_listener_out_len = tf.contrib.seq2seq.tile_batch(
+                        self.listener_out_len, multiplier=self.network_data.beam_width)
                     tiled_batch_size = self.batch_size * self.network_data.beam_width
 
                 else:
@@ -155,7 +164,9 @@ class LASNet(NetworkInterface):
                     attention_units=self.network_data.attention_units,
                     lengths=tiled_listener_out_len,
                     batch_size=tiled_batch_size,
-                    input_state=tuple(tiled_listener_state))
+                    input_state=tuple(tiled_listener_state),
+                    keep_prob=None,
+                    train_ph=self.tf_is_traing_pl)
 
                 start_tokens = tf.fill([self.batch_size], self.network_data.sos_id)
 
@@ -223,7 +234,14 @@ class LASNet(NetworkInterface):
                 tf.summary.scalar('train_label_error_rate', tf.reduce_mean(self.train_ler))
 
             with tf.name_scope("training_op"):
-                self.train_op = self.network_data.optimizer.minimize(self.loss)
+
+                opt = self.network_data.optimizer
+                if self.network_data.clip_norm > 0:
+                    grads, vs = zip(*opt.compute_gradients(self.loss))
+                    grads, _ = tf.clip_by_global_norm(grads, self.network_data.clip_norm)
+                    self.train_op = opt.apply_gradients(zip(grads, vs), global_step=self.global_step)
+                else:
+                    self.train_op = self.network_data.optimizer.minimize(self.loss)
 
             self.checkpoint_saver = tf.train.Saver(save_relative_paths=True)
             self.merged_summary = tf.summary.merge_all()
@@ -236,7 +254,7 @@ class LASNet(NetworkInterface):
               restore_run: bool = True,
               save_partial: bool = True,
               save_freq: int = 10,
-              shuffle: bool=True,
+              shuffle: bool = True,
               use_tensorboard: bool = False,
               tensorboard_freq: int = 50):
 
@@ -316,7 +334,7 @@ class LASNet(NetworkInterface):
                     random.shuffle(aux_list)
                     train_features, train_labels = zip(*aux_list)
 
-                print("Epoch %d of %d, loss %f, ler %f, epoch time %.2fmin, ramaining time %.2fmin" %
+                print("Epoch %d of %d, loss %f, ler %f, epoch time %.2fmin, remaining time %.2fmin" %
                       (epoch + 1,
                        training_epochs,
                        loss_ep,

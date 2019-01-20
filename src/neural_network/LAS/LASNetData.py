@@ -32,4 +32,6 @@ class LASNetData(NetworkDataInterface):
 
         self.kernel_regularizer: float = None
 
+        self.clip_norm: int = None
+
 
