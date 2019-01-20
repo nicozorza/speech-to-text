@@ -143,20 +143,21 @@ def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_fw_cell_units: 
     return input_ph
 
 
-def lstm_cell(size, activation, keep_prob=None):
+def lstm_cell(size, activation, keep_prob=None, train_ph=False):
     cell = tf.nn.rnn_cell.LSTMCell(size, activation=activation)
 
     if keep_prob is not None:
-        cell = tf.nn.rnn_cell.DropoutWrapper(cell, input_keep_prob=keep_prob,
-                                             output_keep_prob=keep_prob, state_keep_prob=keep_prob)
+        keep_prob_ph = tf.cond(train_ph, lambda: tf.constant(keep_prob), lambda: tf.constant(1.0))
+        cell = tf.nn.rnn_cell.DropoutWrapper(cell, input_keep_prob=keep_prob_ph,
+                                             output_keep_prob=keep_prob_ph, state_keep_prob=keep_prob_ph)
     return cell
 
 
 def bidirectional_lstm(input_ph, seq_len_ph, num_units, activation=None, keep_prob=None,
-                       initial_state_fw=None, initial_state_bw=None, scope=None):
+                       initial_state_fw=None, initial_state_bw=None, scope=None, train_ph=False):
 
-    fw_cell = lstm_cell(num_units, activation, keep_prob)
-    bw_cell = lstm_cell(num_units, activation, keep_prob)
+    fw_cell = lstm_cell(num_units, activation, keep_prob, train_ph)
+    bw_cell = lstm_cell(num_units, activation, keep_prob, train_ph)
 
     (out_fw, out_bw), (state_fw, state_bw) = tf.nn.bidirectional_dynamic_rnn(
         cell_fw=fw_cell,
@@ -172,7 +173,7 @@ def bidirectional_lstm(input_ph, seq_len_ph, num_units, activation=None, keep_pr
 
 
 def bidirectional_pyramidal_rnn(input_ph, seq_len_ph, num_layers: int, num_units: List[int], name: str, activation_list,
-                                use_tensorboard: bool = True, tensorboard_scope: str = None, keep_prob=None):
+                                use_tensorboard: bool = True, tensorboard_scope: str = None, keep_prob=None, train_ph=False):
 
     if activation_list is None:
         activation_list = [None] * num_layers
@@ -192,7 +193,8 @@ def bidirectional_pyramidal_rnn(input_ph, seq_len_ph, num_layers: int, num_units
             initial_state_fw=initial_state_fw,
             initial_state_bw=initial_state_bw,
             activation=activation_list[n],
-            keep_prob=keep_prob[n]
+            keep_prob=keep_prob[n],
+            train_ph=train_ph
         )
 
         inputs = tf.concat([out_fw, out_bw], -1)
@@ -277,10 +279,13 @@ def decoder_layer(input_ph, num_layers: int, num_units: List[int], activation_li
 
 
 def attention_cell(input, num_layers: int, rnn_units_list: List[int], rnn_activations_list,
-                   attention_units, lengths):
+                   attention_units, lengths, keep_prob, train_ph):
+
+    if keep_prob is None:
+        keep_prob = [None] * num_layers
 
     cell = tf.nn.rnn_cell.MultiRNNCell(
-        [lstm_cell(rnn_units_list[_], rnn_activations_list[_]) for _ in range(num_layers)])
+        [lstm_cell(rnn_units_list[_], rnn_activations_list[_], keep_prob[_], train_ph) for _ in range(num_layers)])
 
     # TODO Add other mechanisms
     attention_mechanism = tf.contrib.seq2seq.BahdanauAttention(num_units=attention_units,
@@ -295,13 +300,15 @@ def attention_cell(input, num_layers: int, rnn_units_list: List[int], rnn_activa
 
 
 def attention_layer(input, num_layers: int, rnn_units_list: List[int], rnn_activations_list,
-                    attention_units, lengths, batch_size, input_state=None):
+                    attention_units, lengths, batch_size, keep_prob, train_ph, input_state=None):
     cell = attention_cell(input=input,
                           num_layers=num_layers,
                           rnn_units_list=rnn_units_list,
                           rnn_activations_list=rnn_activations_list,
                           attention_units=attention_units,
-                          lengths=lengths)
+                          lengths=lengths,
+                          keep_prob=keep_prob,
+                          train_ph=train_ph)
 
     state = cell.zero_state(batch_size, tf.float32)
     if input_state is not None:
