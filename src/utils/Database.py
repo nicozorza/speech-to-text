@@ -5,6 +5,7 @@ import pickle
 from src.utils.ProjectData import ProjectData
 from src.utils.AudioFeature import AudioFeature
 from src.utils.Label import Label
+import tensorflow as tf
 
 
 class DatabaseItem:
@@ -189,3 +190,87 @@ class Database:
             database.append(input_list[_])
 
         return database
+
+    def to_tfrecords(self, filename: str):
+
+        writer = tf.python_io.TFRecordWriter(filename)
+
+        for item in self.__database:
+            feature_len, num_features = np.shape(item.item_feature.feature)
+            target_len = len(item.label.to_index())
+
+            feats_list = [tf.train.Feature(float_list=tf.train.FloatList(value=frame))
+                          for frame in item.item_feature.feature]
+            feat_dict = {"feature": tf.train.FeatureList(feature=feats_list)}
+            sequence_feats = tf.train.FeatureLists(feature_list=feat_dict)
+
+            # Context features for the entire sequence
+            feat_len = tf.train.Feature(int64_list=tf.train.Int64List(value=[feature_len]))
+            target_len = tf.train.Feature(int64_list=tf.train.Int64List(value=[target_len]))
+            target = tf.train.Feature(int64_list=tf.train.Int64List(value=item.label.to_index()))
+
+            context_feats = tf.train.Features(feature={"feat_len": feat_len,
+                                                       "target_len": target_len,
+                                                       "target": target})
+
+            example = tf.train.SequenceExample(context=context_feats,
+                                               feature_lists=sequence_feats)
+
+            writer.write(example.SerializeToString())
+
+        writer.close()
+
+    @staticmethod
+    def tfrecord_parse_fn(example_proto):
+        context_features = {
+            "feat_len": tf.FixedLenFeature([], dtype=tf.int64),
+            "target_len": tf.FixedLenFeature([], dtype=tf.int64),
+            "target": tf.VarLenFeature(dtype=tf.int64)
+        }
+        sequence_features = {
+            "feature": tf.VarLenFeature(dtype=tf.float32),
+        }
+
+        # Parse the example (returns a dictionary of tensors)
+        context_parsed, sequence_parsed = tf.parse_single_sequence_example(
+            serialized=example_proto,
+            context_features=context_features,
+            sequence_features=sequence_features
+        )
+
+        feature = tf.sparse_to_dense(
+            sparse_indices=sequence_parsed["feature"].indices,
+            sparse_values=sequence_parsed["feature"].values,
+            output_shape=sequence_parsed["feature"].dense_shape
+        )
+
+        target = tf.sparse_to_dense(
+            sparse_indices=context_parsed["target"].indices,
+            sparse_values=context_parsed["target"].values,
+            output_shape=context_parsed["target"].dense_shape
+        )
+
+        return feature, target, context_parsed["feat_len"], context_parsed["target_len"]
+
+    @staticmethod
+    def dataset_from_tfrecord(filename, batch_size, num_features,
+                              feats_padding_value=None, targets_padding_value=None):
+
+        dataset = tf.data.TFRecordDataset(filename)
+        dataset = dataset.map(Database.tfrecord_parse_fn)
+
+        padding_values = None
+        if feats_padding_value is not None and targets_padding_value is not None:
+            padding_values = (tf.constant(feats_padding_value, dtype=tf.float32),
+                              tf.constant(targets_padding_value, dtype=tf.int64),
+                              tf.constant(0, dtype=tf.int64),
+                              tf.constant(0, dtype=tf.int64))
+
+        dataset = dataset.padded_batch(
+            batch_size=batch_size,
+            padded_shapes=((None, num_features), [None], (), ()),
+            padding_values=padding_values
+        )
+
+        return dataset
+
