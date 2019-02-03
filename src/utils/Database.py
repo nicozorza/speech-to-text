@@ -221,7 +221,7 @@ class Database:
         writer.close()
 
     @staticmethod
-    def tfrecord_parse_fn(example_proto):
+    def tfrecord_parse_sparse_fn(example_proto):
         context_features = {
             "feat_len": tf.FixedLenFeature([], dtype=tf.int64),
             "target_len": tf.FixedLenFeature([], dtype=tf.int64),
@@ -238,26 +238,32 @@ class Database:
             sequence_features=sequence_features
         )
 
+        return sequence_parsed["feature"], context_parsed["target"], context_parsed["feat_len"], context_parsed["target_len"]
+
+    @staticmethod
+    def tfrecord_parse_dense_fn(example_proto):
+        sparse_feature, sparse_target, feat_len, target_len = Database.tfrecord_parse_sparse_fn(example_proto)
+
         feature = tf.sparse_to_dense(
-            sparse_indices=sequence_parsed["feature"].indices,
-            sparse_values=sequence_parsed["feature"].values,
-            output_shape=sequence_parsed["feature"].dense_shape
+            sparse_indices=sparse_feature.indices,
+            sparse_values=sparse_feature.values,
+            output_shape=sparse_feature.dense_shape
         )
 
         target = tf.sparse_to_dense(
-            sparse_indices=context_parsed["target"].indices,
-            sparse_values=context_parsed["target"].values,
-            output_shape=context_parsed["target"].dense_shape
+            sparse_indices=sparse_target.indices,
+            sparse_values=sparse_target.values,
+            output_shape=sparse_target.dense_shape
         )
 
-        return feature, target, context_parsed["feat_len"], context_parsed["target_len"]
+        return feature, target, feat_len, target_len
 
     @staticmethod
-    def dataset_from_tfrecord(filename, batch_size, num_features,
+    def dataset_dense_from_tfrecord(filename, batch_size, num_features,
                               feats_padding_value=None, targets_padding_value=None):
 
         dataset = tf.data.TFRecordDataset(filename)
-        dataset = dataset.map(Database.tfrecord_parse_fn)
+        dataset = dataset.map(Database.tfrecord_parse_dense_fn)
 
         padding_values = None
         if feats_padding_value is not None and targets_padding_value is not None:
