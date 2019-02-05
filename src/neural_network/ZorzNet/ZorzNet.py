@@ -35,25 +35,38 @@ class ZorzNet(NetworkInterface):
 
         self.tf_is_traing_pl = None
 
-    def create_graph(self):
+    def create_graph(self,
+                     use_tfrecords=False,
+                     features_tensor=None,
+                     labels_tensor=None,
+                     features_len_tensor=None):
 
         with self.graph.as_default():
             self.tf_is_traing_pl = tf.placeholder_with_default(True, shape=(), name='is_training')
 
             with tf.name_scope("seq_len"):
-                self.seq_len = tf.placeholder(tf.int32, shape=[None], name="sequence_length")
+                if not use_tfrecords:
+                    self.seq_len = tf.placeholder(tf.int32, shape=[None], name="sequence_length")
+                else:
+                    self.seq_len = features_len_tensor
 
             with tf.name_scope("input_features"):
-                self.input_feature = tf.placeholder(
-                    dtype=tf.float32,
-                    shape=[None, None, self.network_data.num_features],
-                    name="input")
-                tf.summary.image('feature', [tf.transpose(self.input_feature)])
+                if not use_tfrecords:
+                    self.input_feature = tf.placeholder(
+                        dtype=tf.float32,
+                        shape=[None, None, self.network_data.num_features],
+                        name="input")
+                else:
+                    self.input_feature = features_tensor
+
             with tf.name_scope("input_labels"):
-                self.input_label = tf.sparse_placeholder(
-                    dtype=tf.int32,
-                    shape=[None, None],
-                    name="input_label")
+                if not use_tfrecords:
+                    self.input_label = tf.sparse_placeholder(
+                        dtype=tf.int32,
+                        shape=[None, None],
+                        name="input_label")
+                else:
+                    self.input_label = labels_tensor
 
             self.rnn_input = tf.identity(self.input_feature)
             with tf.name_scope("dense_layer_1"):
