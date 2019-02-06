@@ -62,39 +62,65 @@ network_data.optimizer = tf.train.AdamOptimizer(learning_rate=network_data.learn
 network = ZorzNet(network_data)
 
 train_files = ['asd.tfrecords']
-val_files = ['asd.tfrecords']
+val_files = ['asd2.tfrecords']
+test_files = ['asd2.tfrecords']
 
 
 restore_run = False
-use_tensorboard = False
+use_tensorboard = True
+tensorboard_freq = 10
+
 save_partial = False
 save_freq = 10
-training_epochs = 10
-batch_size = 2
 
+training_epochs = 100
+train_batch_size = 2
 shuffle_buffer = 10
+
+validate_flag = True
+validate_freq = 5
+val_batch_size = 2
+
+test_flag = True
+test_batch_size = 2
 
 ###########################################################################################################
 
 with network.graph.as_default():
-    # Create tfrecord consumer
-    dataset = tf.data.TFRecordDataset(train_files)
-
-    dataset = dataset.map(Database.tfrecord_parse_dense_fn)
-
-    dataset = dataset.padded_batch(
-        batch_size=batch_size,
+    # Train dataset
+    train_dataset = tf.data.TFRecordDataset(train_files)
+    train_dataset = train_dataset.map(Database.tfrecord_parse_dense_fn)
+    train_dataset = train_dataset.padded_batch(
+        batch_size=train_batch_size,
         padded_shapes=((None, network_data.num_features), [None], (), ()))
-    dataset = dataset
-    dataset = dataset.shuffle(shuffle_buffer)
+    train_dataset = train_dataset.shuffle(shuffle_buffer)
 
-    iterator = dataset.make_initializable_iterator()
+    # Validation dataset
+    val_dataset = tf.data.TFRecordDataset(val_files)
+    val_dataset = val_dataset.map(Database.tfrecord_parse_dense_fn)
+    val_dataset = val_dataset.padded_batch(
+        batch_size=val_batch_size,
+        padded_shapes=((None, network_data.num_features), [None], (), ()))
+
+    # Test dataset
+    test_dataset = tf.data.TFRecordDataset(test_files)
+    test_dataset = test_dataset.map(Database.tfrecord_parse_dense_fn)
+    test_dataset = test_dataset.padded_batch(
+        batch_size=test_batch_size,
+        padded_shapes=((None, network_data.num_features), [None], (), ()))
+
+    iterator = tf.data.Iterator.from_structure(train_dataset.output_types, train_dataset.output_shapes)
     next_element = iterator.get_next()
     feature, target, feat_len, target_len = next_element
 
     feat_len = tf.cast(feat_len, dtype=tf.int32)
     target = tf.cast(target, tf.int32)
     sparse_target = tf.contrib.layers.dense_to_sparse(target)
+
+    # Initialize with required Datasets
+    train_iterator = iterator.make_initializer(train_dataset)
+    val_iterator = iterator.make_initializer(val_dataset)
+    test_iterator = iterator.make_initializer(test_dataset)
 
     network.create_graph(use_tfrecords=True,
                          features_tensor=feature,
@@ -108,9 +134,12 @@ with network.graph.as_default():
         network.load_checkpoint(sess)
 
     train_writer = None
+    val_writer = None
     if use_tensorboard:
         train_writer = network.create_tensorboard_writer(network.network_data.tensorboard_path + '/train', network.graph)
         train_writer.add_graph(sess.graph)
+        val_writer = network.create_tensorboard_writer(network.network_data.tensorboard_path + '/val', network.graph)
+        val_writer.add_graph(sess.graph)
 
     for epoch in range(training_epochs):
         epoch_time = time.time()
@@ -118,7 +147,15 @@ with network.graph.as_default():
         ler_ep = 0
         n_step = 0
 
-        sess.run(iterator.initializer)
+        # --------------------------------------------------------------------------------------------------- #
+        # ---------------------------------------------- TRAIN ---------------------------------------------- #
+        # --------------------------------------------------------------------------------------------------- #
+        sess.run(train_iterator)
+
+        if use_tensorboard and epoch % tensorboard_freq == 0:
+            s = sess.run(network.merged_summary)
+            train_writer.add_summary(s, epoch)
+
         try:
             while True:
                 loss, _, ler = sess.run([network.loss, network.training_op, network.ler])
@@ -132,8 +169,7 @@ with network.graph.as_default():
         loss_ep = loss_ep / n_step
         ler_ep = ler_ep / n_step
 
-        if save_partial:
-            if epoch % save_freq == 0:
+        if save_partial and epoch % save_freq == 0:
                 network.save_checkpoint(sess)
                 network.save_model(sess)
 
@@ -145,8 +181,75 @@ with network.graph.as_default():
                (time.time() - epoch_time) / 60,
                (training_epochs - epoch - 1) * (time.time() - epoch_time) / 60))
 
+        # --------------------------------------------------------------------------------------------------- #
+        # ------------------------------------------- VALIDATE ---------------------------------------------- #
+        # --------------------------------------------------------------------------------------------------- #
+        if validate_flag and epoch % validate_freq == 0:
+            val_epoch_time = time.time()
+            val_loss_ep = 0
+            val_ler_ep = 0
+            val_n_step = 0
+
+            # Start validation iterator
+            sess.run(val_iterator)
+
+            feed_dict = {
+                network.tf_is_traing_pl: False
+            }
+            try:
+                val_ops = [network.loss, network.ler, network.merged_summary] if use_tensorboard \
+                            else [network.loss, network.ler]
+                while True:
+                    val_loss, val_ler, s = sess.run(val_ops, feed_dict=feed_dict)
+                    val_loss_ep += val_loss
+                    val_ler_ep += val_ler
+                    val_n_step += 1
+                    if use_tensorboard:
+                        val_writer.add_summary(s, epoch)
+            except tf.errors.OutOfRangeError:
+                pass
+
+            val_loss_ep = val_loss_ep / val_n_step
+            val_ler_ep = val_ler_ep / val_n_step
+            print('----------------------------------------------------')
+            print("VALIDATION: loss %f, ler %f, validation time %.2fmin" %
+                  (val_loss_ep,
+                   val_ler_ep,
+                   (time.time() - val_epoch_time) / 60))
+            print('----------------------------------------------------')
+
     # save result
     network.save_checkpoint(sess)
     network.save_model(sess)
+
+    # --------------------------------------------------------------------------------------------------- #
+    # ----------------------------------------------- TEST ---------------------------------------------- #
+    # --------------------------------------------------------------------------------------------------- #
+    if test_flag:
+        test_epoch_time = time.time()
+        test_loss_ep = 0
+        test_ler_ep = 0
+        test_n_step = 0
+
+        sess.run(test_iterator)
+        feed_dict = {
+            network.tf_is_traing_pl: False
+        }
+        try:
+            while True:
+                test_loss, test_ler = sess.run([network.loss, network.ler], feed_dict=feed_dict)
+                test_loss_ep += test_loss
+                test_ler_ep += test_ler
+                test_n_step += 1
+        except tf.errors.OutOfRangeError:
+            pass
+
+        test_loss_ep = test_loss_ep / test_n_step
+        test_ler_ep = test_ler_ep / test_n_step
+        print('----------------------------------------------------')
+        print("TEST: loss %f, ler %f, test time %.2fmin" %
+              (test_loss_ep,
+               test_ler_ep,
+               (time.time() - test_epoch_time) / 60))
 
     sess.close()
