@@ -72,7 +72,7 @@ tensorboard_freq = 10
 save_partial = False
 save_freq = 10
 
-training_epochs = 100
+training_epochs = 0
 train_batch_size = 2
 shuffle_buffer = 10
 
@@ -81,7 +81,8 @@ validate_freq = 5
 val_batch_size = 2
 
 test_flag = True
-test_batch_size = 1
+test_batch_size = 2
+num_tests_predictions = 1
 
 ###########################################################################################################
 
@@ -91,7 +92,13 @@ with network.graph.as_default():
     train_dataset = train_dataset.map(Database.tfrecord_parse_dense_fn)
     train_dataset = train_dataset.padded_batch(
         batch_size=train_batch_size,
-        padded_shapes=((None, network_data.num_features), [None], (), ()))
+        padded_shapes=((None, network_data.num_features), [None], (), ()),
+        # padding_values=(tf.constant(value=0, dtype=tf.float32),
+        #                 tf.constant(value=ClassicLabel.num_classes-1, dtype=tf.int64),
+        #                 tf.constant(value=0, dtype=tf.int64),
+        #                 tf.constant(value=0, dtype=tf.int64),
+        #               )
+    )
     train_dataset = train_dataset.shuffle(shuffle_buffer)
 
     # Validation dataset
@@ -106,7 +113,13 @@ with network.graph.as_default():
     test_dataset = test_dataset.map(Database.tfrecord_parse_dense_fn)
     test_dataset = test_dataset.padded_batch(
         batch_size=test_batch_size,
-        padded_shapes=((None, network_data.num_features), [None], (), ()))
+        padded_shapes=((None, network_data.num_features), [None], (), ()),
+        # padding_values=(tf.constant(value=0, dtype=tf.float32),
+        #                 tf.constant(value=ClassicLabel.num_classes-1, dtype=tf.int64),
+        #                 tf.constant(value=0, dtype=tf.int64),
+        #                 tf.constant(value=0, dtype=tf.int64),
+        #                 )
+    )
 
     iterator = tf.data.Iterator.from_structure(train_dataset.output_types, train_dataset.output_shapes)
     next_element = iterator.get_next()
@@ -114,7 +127,7 @@ with network.graph.as_default():
 
     feat_len = tf.cast(feat_len, dtype=tf.int32)
     target = tf.cast(target, tf.int32)
-    sparse_target = tf.contrib.layers.dense_to_sparse(target)
+    sparse_target = tf.contrib.layers.dense_to_sparse(target, eos_token=network_data.num_classes-1)
 
     # Initialize with required Datasets
     train_iterator = iterator.make_initializer(train_dataset)
@@ -255,8 +268,6 @@ with network.graph.as_default():
 
     # ----------------------------------------- TEST TARGETS -------------------------------------------- #
 
-    num_tests = 1
-
     sess = tf.Session(graph=network.graph)
     sess.run(tf.global_variables_initializer())
 
@@ -273,10 +284,10 @@ with network.graph.as_default():
         output_shape=network.decoded[0].dense_shape
     )
     try:
-        for i in range(num_tests):
-            predicted, d, target = sess.run([dense_decoded, network.decoded, target], feed_dict=feed_dict)
+        for i in range(num_tests_predictions):
+            predicted, d, test_target = sess.run([dense_decoded, network.decoded, target], feed_dict=feed_dict)
             print('Predicted: {}'.format(ClassicLabel.from_index(predicted[0])))
-            print('Target: {}'.format(ClassicLabel.from_index(target[0])))
+            print('Target: {}'.format(ClassicLabel.from_index(test_target[0])))
             print()
 
     except tf.errors.OutOfRangeError:
