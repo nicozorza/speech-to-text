@@ -1,5 +1,4 @@
 import time
-
 import tensorflow as tf
 from src.neural_network.ZorzNet.ZorzNetData import ZorzNetData
 from src.neural_network.ZorzNet.ZorzNet import ZorzNet
@@ -62,11 +61,11 @@ network_data.optimizer = tf.train.AdamOptimizer(learning_rate=network_data.learn
 network = ZorzNet(network_data)
 
 train_files = ['asd.tfrecords']
-val_files = ['asd2.tfrecords']
-test_files = ['asd2.tfrecords']
+val_files = ['asd.tfrecords']
+test_files = ['asd.tfrecords']
 
 
-restore_run = False
+restore_run = True
 use_tensorboard = True
 tensorboard_freq = 10
 
@@ -77,12 +76,12 @@ training_epochs = 100
 train_batch_size = 2
 shuffle_buffer = 10
 
-validate_flag = True
+validate_flag = False
 validate_freq = 5
 val_batch_size = 2
 
 test_flag = True
-test_batch_size = 2
+test_batch_size = 1
 
 ###########################################################################################################
 
@@ -251,5 +250,36 @@ with network.graph.as_default():
               (test_loss_ep,
                test_ler_ep,
                (time.time() - test_epoch_time) / 60))
+
+    sess.close()
+
+    # ----------------------------------------- TEST TARGETS -------------------------------------------- #
+
+    num_tests = 1
+
+    sess = tf.Session(graph=network.graph)
+    sess.run(tf.global_variables_initializer())
+
+    network.load_checkpoint(sess)
+
+    sess.run(test_iterator)
+    feed_dict = {
+        network.tf_is_traing_pl: False
+    }
+
+    dense_decoded = tf.sparse_to_dense(
+        sparse_indices=network.decoded[0].indices,
+        sparse_values=network.decoded[0].values,
+        output_shape=network.decoded[0].dense_shape
+    )
+    try:
+        for i in range(num_tests):
+            predicted, d, target = sess.run([dense_decoded, network.decoded, target], feed_dict=feed_dict)
+            print('Predicted: {}'.format(ClassicLabel.from_index(predicted[0])))
+            print('Target: {}'.format(ClassicLabel.from_index(target[0])))
+            print()
+
+    except tf.errors.OutOfRangeError:
+        pass
 
     sess.close()
