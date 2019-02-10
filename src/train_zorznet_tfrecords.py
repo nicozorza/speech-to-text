@@ -72,7 +72,7 @@ tensorboard_freq = 10
 save_partial = False
 save_freq = 10
 
-training_epochs = 0
+training_epochs = 100
 train_batch_size = 2
 shuffle_buffer = 10
 
@@ -81,8 +81,8 @@ validate_freq = 5
 val_batch_size = 2
 
 test_flag = True
-test_batch_size = 2
-num_tests_predictions = 1
+test_batch_size = 1
+num_tests_predictions = 5
 
 ###########################################################################################################
 
@@ -93,11 +93,11 @@ with network.graph.as_default():
     train_dataset = train_dataset.padded_batch(
         batch_size=train_batch_size,
         padded_shapes=((None, network_data.num_features), [None], (), ()),
-        # padding_values=(tf.constant(value=0, dtype=tf.float32),
-        #                 tf.constant(value=ClassicLabel.num_classes-1, dtype=tf.int64),
-        #                 tf.constant(value=0, dtype=tf.int64),
-        #                 tf.constant(value=0, dtype=tf.int64),
-        #               )
+        padding_values=(tf.constant(value=0, dtype=tf.float32),
+                        tf.constant(value=-1, dtype=tf.int64),
+                        tf.constant(value=0, dtype=tf.int64),
+                        tf.constant(value=0, dtype=tf.int64),
+                        )
     )
     train_dataset = train_dataset.shuffle(shuffle_buffer)
 
@@ -106,7 +106,13 @@ with network.graph.as_default():
     val_dataset = val_dataset.map(Database.tfrecord_parse_dense_fn)
     val_dataset = val_dataset.padded_batch(
         batch_size=val_batch_size,
-        padded_shapes=((None, network_data.num_features), [None], (), ()))
+        padded_shapes=((None, network_data.num_features), [None], (), ()),
+        padding_values=(tf.constant(value=0, dtype=tf.float32),
+                        tf.constant(value=-1, dtype=tf.int64),
+                        tf.constant(value=0, dtype=tf.int64),
+                        tf.constant(value=0, dtype=tf.int64),
+                        )
+    )
 
     # Test dataset
     test_dataset = tf.data.TFRecordDataset(test_files)
@@ -114,11 +120,11 @@ with network.graph.as_default():
     test_dataset = test_dataset.padded_batch(
         batch_size=test_batch_size,
         padded_shapes=((None, network_data.num_features), [None], (), ()),
-        # padding_values=(tf.constant(value=0, dtype=tf.float32),
-        #                 tf.constant(value=ClassicLabel.num_classes-1, dtype=tf.int64),
-        #                 tf.constant(value=0, dtype=tf.int64),
-        #                 tf.constant(value=0, dtype=tf.int64),
-        #                 )
+        padding_values=(tf.constant(value=0, dtype=tf.float32),
+                        tf.constant(value=-1, dtype=tf.int64),
+                        tf.constant(value=0, dtype=tf.int64),
+                        tf.constant(value=0, dtype=tf.int64),
+                        )
     )
 
     iterator = tf.data.Iterator.from_structure(train_dataset.output_types, train_dataset.output_shapes)
@@ -127,7 +133,7 @@ with network.graph.as_default():
 
     feat_len = tf.cast(feat_len, dtype=tf.int32)
     target = tf.cast(target, tf.int32)
-    sparse_target = tf.contrib.layers.dense_to_sparse(target, eos_token=network_data.num_classes-1)
+    sparse_target = tf.contrib.layers.dense_to_sparse(target, eos_token=-1)
 
     # Initialize with required Datasets
     train_iterator = iterator.make_initializer(train_dataset)
