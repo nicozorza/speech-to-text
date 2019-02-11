@@ -133,7 +133,7 @@ def model_fn(features, labels, mode, params):
             output_shape=network.decoded[0].dense_shape
         )
         logging_hook = tf.train.LoggingTensorHook({
-            "Predicted": network.input_feature#ClassicLabel.from_index(dense_decoded),
+            "Predicted": network.input_features#ClassicLabel.from_index(dense_decoded),
             # "Truth": ClassicLabel.from_index(network.decoded),
         }, every_n_iter=1
         )
@@ -150,7 +150,7 @@ def model_fn(features, labels, mode, params):
         spec = tf.estimator.EstimatorSpec(
             mode=mode,
             loss=network.loss,
-            train_op=network.training_op,
+            train_op=network.train_op,
             training_hooks=[logging_hook],
             # eval_metric_ops=metrics
         )
