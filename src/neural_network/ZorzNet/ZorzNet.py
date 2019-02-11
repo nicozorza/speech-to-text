@@ -138,9 +138,6 @@ class ZorzNet(NetworkInterface):
                 self.dense_output = tf.nn.softmax(self.dense_output_no_activation, name='dense_output')
                 tf.summary.histogram('dense_output', self.dense_output)
 
-            with tf.name_scope("output_classes"):
-                self.output_classes = tf.argmax(self.dense_output, 2)
-
             with tf.name_scope("loss"):
                 rnn_loss = 0
                 for var in tf.trainable_variables():
@@ -179,6 +176,146 @@ class ZorzNet(NetworkInterface):
             self.checkpoint_saver = tf.train.Saver(save_relative_paths=True)
             self.merged_summary = tf.summary.merge_all()
 
+    def run_tfrecord_epoch(self, session, iterator, epoch, use_tensorboard,
+                           tensorboard_writer, feed_dict=None):
+        loss_ep = 0
+        ler_ep = 0
+        n_step = 0
+
+        session.run(iterator)
+
+        if use_tensorboard:
+            s = session.run(self.merged_summary)
+            tensorboard_writer.add_summary(s, epoch)
+
+        try:
+            while True:
+                loss, _, ler = session.run([self.loss, self.training_op, self.ler], feed_dict=feed_dict)
+                loss_ep += loss
+                ler_ep += ler
+                n_step += 1
+
+        except tf.errors.OutOfRangeError:
+            pass
+
+        return loss_ep / n_step, ler_ep / n_step
+
+    def run_epoch(self, session, features, labels, batch_size, epoch,
+                  use_tensorboard, tensorboard_writer, feed_dict=None):
+        loss_ep = 0
+        ler_ep = 0
+        n_step = 0
+
+        database = list(zip(features, labels))
+
+        for batch in self.create_batch(database, batch_size):
+            batch_features, batch_labels = zip(*batch)
+
+            # Padding input to max_time_step of this batch
+            batch_train_features, batch_train_seq_len = padSequences(batch_features)
+
+            # Converting to sparse representation so as to feed SparseTensor input
+            batch_train_labels = sparseTupleFrom(batch_labels)
+
+            input_feed_dict = {
+                self.input_feature: batch_train_features,
+                self.seq_len: batch_train_seq_len,
+                self.input_label: batch_train_labels
+            }
+
+            if feed_dict is not None:
+                input_feed_dict = {**input_feed_dict, **feed_dict}
+
+            if use_tensorboard:
+                s = session.run(self.merged_summary, feed_dict=input_feed_dict)
+                tensorboard_writer.add_summary(s, epoch)
+                use_tensorboard = False     # Only on one batch
+
+            loss, _, ler = session.run([self.loss, self.training_op, self.ler], feed_dict=input_feed_dict)
+
+            loss_ep += loss
+            ler_ep += ler
+            n_step += 1
+        return loss_ep / n_step, ler_ep / n_step
+
+    def train_tfrecord(self,
+                       train_iterator,
+                       training_epochs: int,
+                       val_iterator=None,
+                       val_freq: int = 5,
+                       restore_run: bool = True,
+                       save_partial: bool = True,
+                       save_freq: int = 10,
+                       use_tensorboard: bool = False,
+                       tensorboard_freq: int = 50):
+
+        with self.graph.as_default():
+            sess = tf.Session(graph=self.graph)
+            sess.run(tf.global_variables_initializer())
+
+            if restore_run:
+                self.load_checkpoint(sess)
+
+            train_writer = None
+            if use_tensorboard:
+                train_writer = self.create_tensorboard_writer(self.network_data.tensorboard_path + '/train',
+                                                              self.graph)
+                train_writer.add_graph(sess.graph)
+                if val_iterator is not None:
+                    val_writer = self.create_tensorboard_writer(self.network_data.tensorboard_path + '/validation',
+                                                                self.graph)
+                    val_writer.add_graph(sess.graph)
+
+            for epoch in range(training_epochs):
+                epoch_time = time.time()
+
+                loss_ep, ler_ep = self.run_tfrecord_epoch(
+                    session=sess,
+                    iterator=train_iterator,
+                    epoch=epoch,
+                    use_tensorboard=use_tensorboard and epoch % tensorboard_freq == 0,
+                    tensorboard_writer=train_writer
+                )
+
+                if save_partial and epoch % save_freq == 0:
+                    self.save_checkpoint(sess)
+                    self.save_model(sess)
+
+                print("Epoch %d of %d, loss %f, ler %f, epoch time %.2fmin, ramaining time %.2fmin" %
+                      (epoch + 1,
+                       training_epochs,
+                       loss_ep,
+                       ler_ep,
+                       (time.time() - epoch_time) / 60,
+                       (training_epochs - epoch - 1) * (time.time() - epoch_time) / 60))
+
+                if val_iterator is not None and epoch % val_freq == 0:
+                    val_epoch_time = time.time()
+
+                    val_loss_ep, val_ler_ep = self.run_tfrecord_epoch(
+                        session=sess,
+                        iterator=val_iterator,
+                        epoch=epoch,
+                        use_tensorboard=use_tensorboard,
+                        tensorboard_writer=val_writer,
+                        feed_dict={self.tf_is_traing_pl: False}
+                    )
+
+                    print('----------------------------------------------------')
+                    print("VALIDATION: loss %f, ler %f, validation time %.2fmin" %
+                          (val_loss_ep,
+                           val_ler_ep,
+                           (time.time() - val_epoch_time) / 60))
+                    print('----------------------------------------------------')
+
+            # save result
+            self.save_checkpoint(sess)
+            self.save_model(sess)
+
+            sess.close()
+
+            return ler_ep, loss_ep
+
     def train(self,
               train_features,
               train_labels,
@@ -187,7 +324,7 @@ class ZorzNet(NetworkInterface):
               restore_run: bool = True,
               save_partial: bool = True,
               save_freq: int = 10,
-              shuffle: bool=True,
+              shuffle: bool = True,
               use_tensorboard: bool = False,
               tensorboard_freq: int = 50):
 
@@ -207,54 +344,15 @@ class ZorzNet(NetworkInterface):
             ler_ep = 0
             for epoch in range(training_epochs):
                 epoch_time = time.time()
-                loss_ep = 0
-                ler_ep = 0
-                n_step = 0
-
-                database = list(zip(train_features, train_labels))
-
-                for batch in self.create_batch(database, batch_size):
-                    batch_features, batch_labels = zip(*batch)
-
-                    # Padding input to max_time_step of this batch
-                    batch_train_features, batch_train_seq_len = padSequences(batch_features)
-
-                    # Converting to sparse representation so as to feed SparseTensor input
-                    batch_train_labels = sparseTupleFrom(batch_labels)
-
-                    feed_dict = {
-                        self.input_feature: batch_train_features,
-                        self.seq_len: batch_train_seq_len,
-                        self.input_label: batch_train_labels
-                    }
-
-                    loss, _, ler = sess.run([self.loss, self.training_op, self.ler], feed_dict=feed_dict)
-
-                    loss_ep += loss
-                    ler_ep += ler
-                    n_step += 1
-                loss_ep = loss_ep / n_step
-                ler_ep = ler_ep / n_step
-
-                if use_tensorboard:
-                    if epoch % tensorboard_freq == 0 and self.network_data.tensorboard_path is not None:
-
-                        random_index = random.randint(0, len(train_features)-1)
-                        feature = [train_features[random_index]]
-                        label = [train_labels[random_index]]
-
-                        # Padding input to max_time_step of this batch
-                        tensorboard_features, tensorboard_seq_len = padSequences(feature)
-
-                        # Converting to sparse representation so as to to feed SparseTensor input
-                        tensorboard_labels = sparseTupleFrom(label)
-                        tensorboard_feed_dict = {
-                            self.input_feature: tensorboard_features,
-                            self.seq_len: tensorboard_seq_len,
-                            self.input_label: tensorboard_labels
-                        }
-                        s = sess.run(self.merged_summary, feed_dict=tensorboard_feed_dict)
-                        train_writer.add_summary(s, epoch)
+                loss_ep, ler_ep = self.run_epoch(
+                    session=sess,
+                    features=train_features,
+                    labels=train_labels,
+                    batch_size=batch_size,
+                    epoch=epoch,
+                    use_tensorboard=use_tensorboard and epoch % tensorboard_freq == 0,
+                    tensorboard_writer=train_writer
+                )
 
                 if save_partial:
                     if epoch % save_freq == 0:
@@ -282,42 +380,54 @@ class ZorzNet(NetworkInterface):
 
             return ler_ep, loss_ep
 
-    def validate(self, features, labels, show_partial: bool=True, batch_size: int = 1):
+    def validate(self, features, labels, show_partial: bool = False, batch_size: int = 1):
         with self.graph.as_default():
             sess = tf.Session(graph=self.graph)
             sess.run(tf.global_variables_initializer())
             self.load_checkpoint(sess)
 
-            acum_ler = 0
-            acum_loss = 0
-            n_step = 0
-            database = list(zip(features, labels))
-            batch_list = self.create_batch(database, batch_size)
-            for batch in batch_list:
-                feature, label = zip(*batch)
-                # Padding input to max_time_step of this batch
-                batch_features, batch_seq_len = padSequences(feature)
+            acum_loss, acum_ler = self.run_epoch(
+                session=sess,
+                features=features,
+                labels=labels,
+                batch_size=batch_size,
+                epoch=0,
+                use_tensorboard=False,
+                tensorboard_writer=None,
+                feed_dict={self.tf_is_traing_pl: False}
+            )
 
-                # Converting to sparse representation so as to to feed SparseTensor input
-                batch_labels = sparseTupleFrom(label)
-                feed_dict = {
-                    self.input_feature: batch_features,
-                    self.seq_len: batch_seq_len,
-                    self.input_label: batch_labels,
-                    self.tf_is_traing_pl: False
-                }
-                ler, loss = sess.run([self.ler, self.logits_loss], feed_dict=feed_dict)
-
-                if show_partial:
-                    print("Batch %d of %d, ler %f" % (n_step+1, len(batch_list), ler))
-                acum_ler += ler
-                acum_loss += loss
-                n_step += 1
-            print("Validation ler: %f, loss: %f" % (acum_ler/n_step, acum_loss/n_step))
+            print("Validation ler: %f, loss: %f" % (acum_ler, acum_loss))
 
             sess.close()
 
             return acum_ler/len(labels), acum_loss/len(labels)
+
+    def validate_tfrecord(self, val_iterator):
+        with self.graph.as_default():
+            sess = tf.Session(graph=self.graph)
+            sess.run(tf.global_variables_initializer())
+            self.load_checkpoint(sess)
+
+            val_epoch_time = time.time()
+
+            val_loss_ep, val_ler_ep = self.run_tfrecord_epoch(
+                session=sess,
+                iterator=val_iterator,
+                epoch=0,
+                use_tensorboard=False,
+                tensorboard_writer=None,
+                feed_dict={self.tf_is_traing_pl: False}
+            )
+
+            print('----------------------------------------------------')
+            print("VALIDATION: loss %f, ler %f, validation time %.2fmin" %
+                  (val_loss_ep,
+                   val_ler_ep,
+                   (time.time() - val_epoch_time) / 60))
+            print('----------------------------------------------------')
+
+            return val_ler_ep, val_loss_ep
 
     def predict(self, feature):
 
@@ -340,5 +450,3 @@ class ZorzNet(NetworkInterface):
             sess.close()
 
             return predicted[0][1]
-
-

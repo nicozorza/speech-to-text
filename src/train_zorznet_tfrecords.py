@@ -72,7 +72,7 @@ tensorboard_freq = 10
 save_partial = False
 save_freq = 10
 
-training_epochs = 100
+training_epochs = 10
 train_batch_size = 2
 shuffle_buffer = 10
 
@@ -140,138 +140,26 @@ with network.graph.as_default():
     val_iterator = iterator.make_initializer(val_dataset)
     test_iterator = iterator.make_initializer(test_dataset)
 
-    network.create_graph(use_tfrecords=True,
-                         features_tensor=feature,
-                         labels_tensor=sparse_target,
-                         features_len_tensor=feat_len)
+network.create_graph(use_tfrecords=True,
+                     features_tensor=feature,
+                     labels_tensor=sparse_target,
+                     features_len_tensor=feat_len)
 
-    sess = tf.Session(graph=network.graph)
-    sess.run(tf.global_variables_initializer())
+network.train_tfrecord(
+    train_iterator,
+    val_iterator=val_iterator,
+    restore_run=restore_run,
+    save_partial=save_partial,
+    save_freq=save_freq,
+    use_tensorboard=use_tensorboard,
+    tensorboard_freq=tensorboard_freq,
+    training_epochs=training_epochs
+)
 
-    if restore_run:
-        network.load_checkpoint(sess)
+network.validate_tfrecord(val_iterator)
 
-    train_writer = None
-    val_writer = None
-    if use_tensorboard:
-        train_writer = network.create_tensorboard_writer(network.network_data.tensorboard_path + '/train', network.graph)
-        train_writer.add_graph(sess.graph)
-        val_writer = network.create_tensorboard_writer(network.network_data.tensorboard_path + '/val', network.graph)
-        val_writer.add_graph(sess.graph)
 
-    for epoch in range(training_epochs):
-        epoch_time = time.time()
-        loss_ep = 0
-        ler_ep = 0
-        n_step = 0
-
-        # --------------------------------------------------------------------------------------------------- #
-        # ---------------------------------------------- TRAIN ---------------------------------------------- #
-        # --------------------------------------------------------------------------------------------------- #
-        sess.run(train_iterator)
-
-        if use_tensorboard and epoch % tensorboard_freq == 0:
-            s = sess.run(network.merged_summary)
-            train_writer.add_summary(s, epoch)
-
-        try:
-            while True:
-                loss, _, ler = sess.run([network.loss, network.training_op, network.ler])
-                loss_ep += loss
-                ler_ep += ler
-                n_step += 1
-
-        except tf.errors.OutOfRangeError:
-            pass
-
-        loss_ep = loss_ep / n_step
-        ler_ep = ler_ep / n_step
-
-        if save_partial and epoch % save_freq == 0:
-                network.save_checkpoint(sess)
-                network.save_model(sess)
-
-        print("Epoch %d of %d, loss %f, ler %f, epoch time %.2fmin, ramaining time %.2fmin" %
-              (epoch + 1,
-               training_epochs,
-               loss_ep,
-               ler_ep,
-               (time.time() - epoch_time) / 60,
-               (training_epochs - epoch - 1) * (time.time() - epoch_time) / 60))
-
-        # --------------------------------------------------------------------------------------------------- #
-        # ------------------------------------------- VALIDATE ---------------------------------------------- #
-        # --------------------------------------------------------------------------------------------------- #
-        if validate_flag and epoch % validate_freq == 0:
-            val_epoch_time = time.time()
-            val_loss_ep = 0
-            val_ler_ep = 0
-            val_n_step = 0
-
-            # Start validation iterator
-            sess.run(val_iterator)
-
-            feed_dict = {
-                network.tf_is_traing_pl: False
-            }
-            try:
-                val_ops = [network.loss, network.ler, network.merged_summary] if use_tensorboard \
-                            else [network.loss, network.ler]
-                while True:
-                    val_loss, val_ler, s = sess.run(val_ops, feed_dict=feed_dict)
-                    val_loss_ep += val_loss
-                    val_ler_ep += val_ler
-                    val_n_step += 1
-                    if use_tensorboard:
-                        val_writer.add_summary(s, epoch)
-            except tf.errors.OutOfRangeError:
-                pass
-
-            val_loss_ep = val_loss_ep / val_n_step
-            val_ler_ep = val_ler_ep / val_n_step
-            print('----------------------------------------------------')
-            print("VALIDATION: loss %f, ler %f, validation time %.2fmin" %
-                  (val_loss_ep,
-                   val_ler_ep,
-                   (time.time() - val_epoch_time) / 60))
-            print('----------------------------------------------------')
-
-    # save result
-    network.save_checkpoint(sess)
-    network.save_model(sess)
-
-    # --------------------------------------------------------------------------------------------------- #
-    # ----------------------------------------------- TEST ---------------------------------------------- #
-    # --------------------------------------------------------------------------------------------------- #
-    if test_flag:
-        test_epoch_time = time.time()
-        test_loss_ep = 0
-        test_ler_ep = 0
-        test_n_step = 0
-
-        sess.run(test_iterator)
-        feed_dict = {
-            network.tf_is_traing_pl: False
-        }
-        try:
-            while True:
-                test_loss, test_ler = sess.run([network.loss, network.ler], feed_dict=feed_dict)
-                test_loss_ep += test_loss
-                test_ler_ep += test_ler
-                test_n_step += 1
-        except tf.errors.OutOfRangeError:
-            pass
-
-        test_loss_ep = test_loss_ep / test_n_step
-        test_ler_ep = test_ler_ep / test_n_step
-        print('----------------------------------------------------')
-        print("TEST: loss %f, ler %f, test time %.2fmin" %
-              (test_loss_ep,
-               test_ler_ep,
-               (time.time() - test_epoch_time) / 60))
-
-    sess.close()
-
+with network.graph.as_default():
     # ----------------------------------------- TEST TARGETS -------------------------------------------- #
 
     sess = tf.Session(graph=network.graph)
