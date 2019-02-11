@@ -14,9 +14,9 @@ class ZorzNet(NetworkInterface):
 
         self.graph: tf.Graph = tf.Graph()
 
-        self.seq_len = None
-        self.input_feature = None
-        self.input_label = None
+        self.input_features_length = None
+        self.input_features = None
+        self.input_labels = None
         self.rnn_cell = None
         self.multi_rrn_cell = None
         self.rnn_input = None
@@ -26,7 +26,7 @@ class ZorzNet(NetworkInterface):
         self.output_classes = None
         self.logits_loss = None
         self.loss = None
-        self.training_op: tf.Operation = None
+        self.train_op: tf.Operation = None
         self.merged_summary = None
 
         self.output_time_major = None
@@ -46,29 +46,29 @@ class ZorzNet(NetworkInterface):
 
             with tf.name_scope("seq_len"):
                 if not use_tfrecords:
-                    self.seq_len = tf.placeholder(tf.int32, shape=[None], name="sequence_length")
+                    self.input_features_length = tf.placeholder(tf.int32, shape=[None], name="sequence_length")
                 else:
-                    self.seq_len = features_len_tensor
+                    self.input_features_length = features_len_tensor
 
             with tf.name_scope("input_features"):
                 if not use_tfrecords:
-                    self.input_feature = tf.placeholder(
+                    self.input_features = tf.placeholder(
                         dtype=tf.float32,
                         shape=[None, None, self.network_data.num_features],
                         name="input")
                 else:
-                    self.input_feature = features_tensor
+                    self.input_features = features_tensor
 
             with tf.name_scope("input_labels"):
                 if not use_tfrecords:
-                    self.input_label = tf.sparse_placeholder(
+                    self.input_labels = tf.sparse_placeholder(
                         dtype=tf.int32,
                         shape=[None, None],
                         name="input_label")
                 else:
-                    self.input_label = labels_tensor
+                    self.input_labels = labels_tensor
 
-            self.rnn_input = tf.identity(self.input_feature)
+            self.rnn_input = tf.identity(self.input_features)
             with tf.name_scope("dense_layer_1"):
                 self.rnn_input = dense_multilayer(input_ph=self.rnn_input,
                                                   num_layers=self.network_data.num_dense_layers_1,
@@ -87,7 +87,7 @@ class ZorzNet(NetworkInterface):
                 if self.network_data.is_bidirectional:
                     self.rnn_outputs = bidirectional_rnn(
                         input_ph=self.rnn_input,
-                        seq_len_ph=self.seq_len,
+                        seq_len_ph=self.input_features_length,
                         num_layers=len(self.network_data.num_fw_cell_units),
                         num_fw_cell_units=self.network_data.num_fw_cell_units,
                         num_bw_cell_units=self.network_data.num_bw_cell_units,
@@ -101,7 +101,7 @@ class ZorzNet(NetworkInterface):
                 else:
                     self.rnn_outputs = unidirectional_rnn(
                         input_ph=self.rnn_input,
-                        seq_len_ph=self.seq_len,
+                        seq_len_ph=self.input_features_length,
                         num_layers=len(self.network_data.num_cell_units),
                         num_cell_units=self.network_data.num_cell_units,
                         name="RNN_cell",
@@ -151,7 +151,7 @@ class ZorzNet(NetworkInterface):
                             'kernel' in var.name:
                         dense_loss += tf.nn.l2_loss(var)
 
-                loss = tf.nn.ctc_loss(self.input_label, self.dense_output_no_activation, self.seq_len, time_major=False)
+                loss = tf.nn.ctc_loss(self.input_labels, self.dense_output_no_activation, self.input_features_length, time_major=False)
                 self.logits_loss = tf.reduce_mean(tf.reduce_sum(loss))
                 self.loss = self.logits_loss \
                             + self.network_data.rnn_regularizer * rnn_loss \
@@ -160,16 +160,16 @@ class ZorzNet(NetworkInterface):
 
             # define the optimizer
             with tf.name_scope("training"):
-                self.training_op = self.network_data.optimizer.minimize(self.loss)
+                self.train_op = self.network_data.optimizer.minimize(self.loss)
 
             with tf.name_scope("decoder"):
                 self.output_time_major = tf.transpose(self.dense_output, (1, 0, 2))
-                self.decoded, log_prob = self.network_data.decoder_function(self.output_time_major, self.seq_len)
+                self.decoded, log_prob = self.network_data.decoder_function(self.output_time_major, self.input_features_length)
 
             with tf.name_scope("label_error_rate"):
                 # Inaccuracy: label error rate
                 self.ler = tf.reduce_mean(tf.edit_distance(hypothesis=tf.cast(self.decoded[0], tf.int32),
-                                                           truth=self.input_label,
+                                                           truth=self.input_labels,
                                                            normalize=True))
                 tf.summary.scalar('label_error_rate', tf.reduce_mean(self.ler))
 
@@ -190,7 +190,7 @@ class ZorzNet(NetworkInterface):
 
         try:
             while True:
-                loss, _, ler = session.run([self.loss, self.training_op, self.ler], feed_dict=feed_dict)
+                loss, _, ler = session.run([self.loss, self.train_op, self.ler], feed_dict=feed_dict)
                 loss_ep += loss
                 ler_ep += ler
                 n_step += 1
@@ -218,9 +218,9 @@ class ZorzNet(NetworkInterface):
             batch_train_labels = sparseTupleFrom(batch_labels)
 
             input_feed_dict = {
-                self.input_feature: batch_train_features,
-                self.seq_len: batch_train_seq_len,
-                self.input_label: batch_train_labels
+                self.input_features: batch_train_features,
+                self.input_features_length: batch_train_seq_len,
+                self.input_labels: batch_train_labels
             }
 
             if feed_dict is not None:
@@ -231,7 +231,7 @@ class ZorzNet(NetworkInterface):
                 tensorboard_writer.add_summary(s, epoch)
                 use_tensorboard = False     # Only on one batch
 
-            loss, _, ler = session.run([self.loss, self.training_op, self.ler], feed_dict=input_feed_dict)
+            loss, _, ler = session.run([self.loss, self.train_op, self.ler], feed_dict=input_feed_dict)
 
             loss_ep += loss
             ler_ep += ler
@@ -440,8 +440,8 @@ class ZorzNet(NetworkInterface):
             features, seq_len = padSequences(feature)
 
             feed_dict = {
-                self.input_feature: features,
-                self.seq_len: seq_len,
+                self.input_features: features,
+                self.input_features_length: seq_len,
                 self.tf_is_traing_pl: False
             }
 

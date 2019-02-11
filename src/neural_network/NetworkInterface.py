@@ -82,3 +82,21 @@ class NetworkInterface:
 
     def predict(self, feature):
         raise NotImplementedError("Implement prediction method")
+
+    def train_tfrecord(self,
+                       train_iterator,
+                       training_epochs: int,
+                       val_iterator=None,
+                       val_freq: int = 5,
+                       restore_run: bool = True,
+                       save_partial: bool = True,
+                       save_freq: int = 10,
+                       use_tensorboard: bool = False,
+                       tensorboard_freq: int = 50):
+        raise NotImplementedError("Implement training method")
+
+    def validate_tfrecord(self, val_iterator):
+        raise NotImplementedError("Implement validation method")
+
+    def predict_tfrecord(self, feature):
+        raise NotImplementedError("Implement prediction method")
