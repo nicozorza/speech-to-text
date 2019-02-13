@@ -49,27 +49,44 @@ class LASNet(NetworkInterface):
 
         self.merged_summary = None
 
-    def create_graph(self):
+    def create_graph(self,
+                     use_tfrecords=False,
+                     features_tensor=None,
+                     labels_tensor=None,
+                     features_len_tensor=None,
+                     labels_len_tensor=None):
 
         with self.graph.as_default():
             self.tf_is_traing_pl = tf.placeholder_with_default(True, shape=(), name='is_training')
 
             with tf.name_scope("input_features"):
-                self.input_features = tf.placeholder(dtype=tf.float32,
-                                                     shape=[None, None, self.network_data.num_features],
-                                                     name="input_features")
+                if use_tfrecords:
+                    self.input_features = features_tensor
+                else:
+                    self.input_features = tf.placeholder(dtype=tf.float32,
+                                                         shape=[None, None, self.network_data.num_features],
+                                                         name="input_features")
             with tf.name_scope("input_features_length"):
-                self.input_features_length = tf.placeholder(dtype=tf.int32,
-                                                            shape=[None],
-                                                            name='input_features_length')
+                if use_tfrecords:
+                    self.input_features_length = features_len_tensor
+                else:
+                    self.input_features_length = tf.placeholder(dtype=tf.int32,
+                                                                shape=[None],
+                                                                name='input_features_length')
             with tf.name_scope("input_labels"):
-                self.input_labels = tf.placeholder(dtype=tf.int32,
-                                                   shape=[None, None],
-                                                   name='input_labels')
+                if use_tfrecords:
+                    self.input_labels = labels_tensor
+                else:
+                    self.input_labels = tf.placeholder(dtype=tf.int32,
+                                                       shape=[None, None],
+                                                       name='input_labels')
             with tf.name_scope("input_labels_length"):
-                self.input_labels_length = tf.placeholder(dtype=tf.int32,
-                                                          shape=[None],
-                                                          name='input_labels_length')
+                if use_tfrecords:
+                    self.input_labels_length = labels_len_tensor
+                else:
+                    self.input_labels_length = tf.placeholder(dtype=tf.int32,
+                                                              shape=[None],
+                                                              name='input_labels_length')
 
             self.max_label_length = tf.reduce_max(self.input_labels_length, name='max_label_length')
             self.max_features_length = tf.reduce_max(self.input_features_length, name='max_features_length')
@@ -260,6 +277,143 @@ class LASNet(NetworkInterface):
             self.checkpoint_saver = tf.train.Saver(save_relative_paths=True)
             self.merged_summary = tf.summary.merge_all()
 
+    def run_tfrecord_epoch(self, session, iterator, epoch, use_tensorboard,
+                           tensorboard_writer, feed_dict=None):
+        loss_ep = 0
+        ler_ep = 0
+        n_step = 0
+
+        session.run(iterator)
+
+        if use_tensorboard:
+            s = session.run(self.merged_summary)
+            tensorboard_writer.add_summary(s, epoch)
+
+        try:
+            while True:
+                loss, _, ler = session.run([self.loss, self.train_op, self.train_ler], feed_dict=feed_dict)
+                loss_ep += loss
+                ler_ep += ler
+                n_step += 1
+
+        except tf.errors.OutOfRangeError:
+            pass
+
+        return loss_ep / n_step, ler_ep / n_step
+
+    def run_epoch(self, session, features, labels, batch_size, epoch,
+                  use_tensorboard, tensorboard_writer, feed_dict=None):
+        loss_ep = 0
+        ler_ep = 0
+        n_step = 0
+
+        database = list(zip(features, labels))
+
+        for batch in self.create_batch(database, batch_size):
+            batch_features, batch_labels = zip(*batch)
+
+            # Padding input to max_time_step of this batch
+            batch_train_features, batch_train_seq_len = padSequences(batch_features)
+            batch_train_labels, batch_train_labels_len = padSequences(batch_labels, dtype=np.int64,
+                                                                      value=LASLabel.PAD_INDEX)
+
+            input_feed_dict = {
+                self.input_features: batch_train_features,
+                self.input_features_length: batch_train_seq_len,
+                self.input_labels: batch_train_labels,
+                self.input_labels_length: batch_train_labels_len
+            }
+
+            if feed_dict is not None:
+                input_feed_dict = {**input_feed_dict, **feed_dict}
+
+            if use_tensorboard:
+                s = session.run(self.merged_summary, feed_dict=input_feed_dict)
+                tensorboard_writer.add_summary(s, epoch)
+                use_tensorboard = False     # Only on one batch
+
+            loss, _, ler = session.run([self.loss, self.train_op, self.ler], feed_dict=input_feed_dict)
+
+            loss_ep += loss
+            ler_ep += ler
+            n_step += 1
+        return loss_ep / n_step, ler_ep / n_step
+
+    def train_tfrecord(self,
+                       train_iterator,
+                       training_epochs: int,
+                       val_iterator=None,
+                       val_freq: int = 5,
+                       restore_run: bool = True,
+                       save_partial: bool = True,
+                       save_freq: int = 10,
+                       use_tensorboard: bool = False,
+                       tensorboard_freq: int = 50):
+
+        with self.graph.as_default():
+            sess = tf.Session(graph=self.graph)
+            sess.run(tf.global_variables_initializer())
+
+            if restore_run:
+                self.load_checkpoint(sess)
+
+            train_writer = None
+            if use_tensorboard:
+                train_writer = self.create_tensorboard_writer(self.network_data.tensorboard_path + '/train', self.graph)
+                train_writer.add_graph(sess.graph)
+                if val_iterator is not None:
+                    val_writer = self.create_tensorboard_writer(self.network_data.tensorboard_path + '/validation',
+                                                                self.graph)
+                    val_writer.add_graph(sess.graph)
+
+            for epoch in range(training_epochs):
+                epoch_time = time.time()
+                loss_ep, ler_ep = self.run_tfrecord_epoch(
+                    session=sess,
+                    iterator=train_iterator,
+                    epoch=epoch,
+                    use_tensorboard=use_tensorboard and epoch % tensorboard_freq == 0,
+                    tensorboard_writer=train_writer
+                )
+
+                if save_partial:
+                    if epoch % save_freq == 0:
+                        self.save_checkpoint(sess)
+                        self.save_model(sess)
+
+                print("Epoch %d of %d, loss %f, ler %f, epoch time %.2fmin, remaining time %.2fmin" %
+                      (epoch + 1,
+                       training_epochs,
+                       loss_ep,
+                       ler_ep,
+                       (time.time()-epoch_time)/60,
+                       (training_epochs-epoch-1)*(time.time()-epoch_time)/60))
+
+                if val_iterator is not None and epoch % val_freq == 0:
+                    val_epoch_time = time.time()
+
+                    val_loss_ep, val_ler_ep = self.run_tfrecord_epoch(
+                        session=sess,
+                        iterator=val_iterator,
+                        epoch=epoch,
+                        use_tensorboard=use_tensorboard,
+                        tensorboard_writer=val_writer,
+                        feed_dict={self.tf_is_traing_pl: False}
+                    )
+
+                    print('----------------------------------------------------')
+                    print("VALIDATION: loss %f, ler %f, validation time %.2fmin" %
+                          (val_loss_ep,
+                           val_ler_ep,
+                           (time.time() - val_epoch_time) / 60))
+                    print('----------------------------------------------------')
+
+            # save result
+            self.save_checkpoint(sess)
+            self.save_model(sess)
+
+            sess.close()
+
     def train(self,
               train_features,
               train_labels,
@@ -284,59 +438,17 @@ class LASNet(NetworkInterface):
                 train_writer = self.create_tensorboard_writer(self.network_data.tensorboard_path + '/train', self.graph)
                 train_writer.add_graph(sess.graph)
 
-            loss_ep = 0
-            ler_ep = 0
             for epoch in range(training_epochs):
                 epoch_time = time.time()
-                loss_ep = 0
-                ler_ep = 0
-                n_step = 0
-
-                database = list(zip(train_features, train_labels))
-
-                for batch in self.create_batch(database, batch_size):
-                    batch_features, batch_labels = zip(*batch)
-
-                    # Padding input to max_time_step of this batch
-                    batch_train_features, batch_train_seq_len = padSequences(batch_features)
-                    batch_train_labels, batch_train_labels_len = padSequences(batch_labels, dtype=np.int64,
-                                                                              value=LASLabel.PAD_INDEX)
-
-                    feed_dict = {
-                        self.input_features: batch_train_features,
-                        self.input_features_length: batch_train_seq_len,
-                        self.input_labels: batch_train_labels,
-                        self.input_labels_length: batch_train_labels_len
-                    }
-
-                    loss, _, ler = sess.run([self.loss, self.train_op, self.train_ler], feed_dict=feed_dict)
-
-                    loss_ep += loss
-                    ler_ep += ler
-                    n_step += 1
-                loss_ep = loss_ep / n_step
-                ler_ep = ler_ep / n_step
-
-                if use_tensorboard:
-                    if epoch % tensorboard_freq == 0 and self.network_data.tensorboard_path is not None:
-
-                        random_index = random.randint(0, len(train_features)-1)
-                        feature = [train_features[random_index]]
-                        label = [train_labels[random_index]]
-
-                        # Padding input to max_time_step of this batch
-                        tensorboard_features, tensorboard_seq_len = padSequences(feature)
-                        tensorboard_labels, tensorboard_labels_len = padSequences(label, dtype=np.int64,
-                                                                                  value=LASLabel.PAD_INDEX)
-
-                        tensorboard_feed_dict = {
-                            self.input_features: tensorboard_features,
-                            self.input_features_length: tensorboard_seq_len,
-                            self.input_labels: tensorboard_labels,
-                            self.input_labels_length: tensorboard_labels_len
-                        }
-                        s = sess.run(self.merged_summary, feed_dict=tensorboard_feed_dict)
-                        train_writer.add_summary(s, epoch)
+                loss_ep, ler_ep = self.run_epoch(
+                    session=sess,
+                    features=train_features,
+                    labels=train_labels,
+                    batch_size=batch_size,
+                    epoch=epoch,
+                    use_tensorboard=use_tensorboard and epoch % tensorboard_freq == 0,
+                    tensorboard_writer=train_writer
+                )
 
                 if save_partial:
                     if epoch % save_freq == 0:
@@ -362,10 +474,54 @@ class LASNet(NetworkInterface):
 
             sess.close()
 
-            return 0, loss_ep
-
     def validate(self, features, labels, show_partial: bool = True, batch_size: int = 1):
-        pass
+        with self.graph.as_default():
+            sess = tf.Session(graph=self.graph)
+            sess.run(tf.global_variables_initializer())
+            self.load_checkpoint(sess)
+
+            acum_loss, acum_ler = self.run_epoch(
+                session=sess,
+                features=features,
+                labels=labels,
+                batch_size=batch_size,
+                epoch=0,
+                use_tensorboard=False,
+                tensorboard_writer=None,
+                feed_dict={self.tf_is_traing_pl: False}
+            )
+
+            print("Validation ler: %f, loss: %f" % (acum_ler, acum_loss))
+
+            sess.close()
+
+            return acum_ler / len(labels), acum_loss / len(labels)
+
+    def validate_tfrecord(self, val_iterator):
+        with self.graph.as_default():
+            sess = tf.Session(graph=self.graph)
+            sess.run(tf.global_variables_initializer())
+            self.load_checkpoint(sess)
+
+            val_epoch_time = time.time()
+
+            val_loss_ep, val_ler_ep = self.run_tfrecord_epoch(
+                session=sess,
+                iterator=val_iterator,
+                epoch=0,
+                use_tensorboard=False,
+                tensorboard_writer=None,
+                feed_dict={self.tf_is_traing_pl: False}
+            )
+
+            print('----------------------------------------------------')
+            print("VALIDATION: loss %f, ler %f, validation time %.2fmin" %
+                  (val_loss_ep,
+                   val_ler_ep,
+                   (time.time() - val_epoch_time) / 60))
+            print('----------------------------------------------------')
+
+            return val_ler_ep, val_loss_ep
 
     def predict(self, feature):
         feature = np.reshape(feature, [1, len(feature), np.shape(feature)[1]])
