@@ -1,3 +1,5 @@
+import random
+import time
 import tensorflow as tf
 import numpy as np
 import os
@@ -23,6 +25,8 @@ class NetworkInterface:
     def __init__(self, network_data: NetworkDataInterface):
         self.network_data = network_data
         self.checkpoint_saver: Saver = None
+        self.graph: tf.Graph = tf.Graph()
+        self.tf_is_traing_pl = None
 
     def create_tensorboard_writer(self, tensorboard_path, graph):
         if tensorboard_path is not None:
@@ -72,16 +76,73 @@ class NetworkInterface:
     def create_graph(self):
         raise NotImplementedError("Implement graph creation method")
 
-    def train(self, train_features, train_labels, batch_size: int, training_epochs: int,
-              restore_run: bool = True, save_partial: bool = True, save_freq: int = 10,
-              shuffle: bool = True, use_tensorboard: bool = False, tensorboard_freq: int = 50):
-        raise NotImplementedError("Implement training method")
+    def run_epoch(self, session, features, labels, batch_size, epoch,
+                  use_tensorboard, tensorboard_writer, feed_dict=None):
+        raise NotImplementedError("Override this method for the custom network")
 
-    def validate(self, features, labels, show_partial: bool=True, batch_size: int = 1):
-        raise NotImplementedError("Implement validation method")
+    def run_tfrecord_epoch(self, session, iterator, epoch, use_tensorboard,
+                           tensorboard_writer, feed_dict=None):
+        raise NotImplementedError("Override this method for the custom network")
 
-    def predict(self, feature):
-        raise NotImplementedError("Implement prediction method")
+    def train(self,
+              train_features,
+              train_labels,
+              batch_size: int,
+              training_epochs: int,
+              restore_run: bool = True,
+              save_partial: bool = True,
+              save_freq: int = 10,
+              shuffle: bool = True,
+              use_tensorboard: bool = False,
+              tensorboard_freq: int = 50):
+
+        with self.graph.as_default():
+            sess = tf.Session(graph=self.graph)
+            sess.run(tf.global_variables_initializer())
+
+            if restore_run:
+                self.load_checkpoint(sess)
+
+            train_writer = None
+            if use_tensorboard:
+                train_writer = self.create_tensorboard_writer(self.network_data.tensorboard_path + '/train', self.graph)
+                train_writer.add_graph(sess.graph)
+
+            for epoch in range(training_epochs):
+                epoch_time = time.time()
+                loss_ep, ler_ep = self.run_epoch(
+                    session=sess,
+                    features=train_features,
+                    labels=train_labels,
+                    batch_size=batch_size,
+                    epoch=epoch,
+                    use_tensorboard=use_tensorboard and epoch % tensorboard_freq == 0,
+                    tensorboard_writer=train_writer
+                )
+
+                if save_partial:
+                    if epoch % save_freq == 0:
+                        self.save_checkpoint(sess)
+                        self.save_model(sess)
+
+                if shuffle:
+                    aux_list = list(zip(train_features, train_labels))
+                    random.shuffle(aux_list)
+                    train_features, train_labels = zip(*aux_list)
+
+                print("Epoch %d of %d, loss %f, ler %f, epoch time %.2fmin, remaining time %.2fmin" %
+                      (epoch + 1,
+                       training_epochs,
+                       loss_ep,
+                       ler_ep,
+                       (time.time()-epoch_time)/60,
+                       (training_epochs-epoch-1)*(time.time()-epoch_time)/60))
+
+            # save result
+            self.save_checkpoint(sess)
+            self.save_model(sess)
+
+            sess.close()
 
     def train_tfrecord(self,
                        train_iterator,
@@ -93,10 +154,121 @@ class NetworkInterface:
                        save_freq: int = 10,
                        use_tensorboard: bool = False,
                        tensorboard_freq: int = 50):
-        raise NotImplementedError("Implement training method")
+        with self.graph.as_default():
+            sess = tf.Session(graph=self.graph)
+            sess.run(tf.global_variables_initializer())
+
+            if restore_run:
+                self.load_checkpoint(sess)
+
+            train_writer = None
+            if use_tensorboard:
+                train_writer = self.create_tensorboard_writer(self.network_data.tensorboard_path + '/train', self.graph)
+                train_writer.add_graph(sess.graph)
+                if val_iterator is not None:
+                    val_writer = self.create_tensorboard_writer(self.network_data.tensorboard_path + '/validation',
+                                                                self.graph)
+                    val_writer.add_graph(sess.graph)
+
+            for epoch in range(training_epochs):
+                epoch_time = time.time()
+                loss_ep, ler_ep = self.run_tfrecord_epoch(
+                    session=sess,
+                    iterator=train_iterator,
+                    epoch=epoch,
+                    use_tensorboard=use_tensorboard and epoch % tensorboard_freq == 0,
+                    tensorboard_writer=train_writer
+                )
+
+                if save_partial:
+                    if epoch % save_freq == 0:
+                        self.save_checkpoint(sess)
+                        self.save_model(sess)
+
+                print("Epoch %d of %d, loss %f, ler %f, epoch time %.2fmin, remaining time %.2fmin" %
+                      (epoch + 1,
+                       training_epochs,
+                       loss_ep,
+                       ler_ep,
+                       (time.time()-epoch_time)/60,
+                       (training_epochs-epoch-1)*(time.time()-epoch_time)/60))
+
+                if val_iterator is not None and epoch % val_freq == 0:
+                    val_epoch_time = time.time()
+
+                    val_loss_ep, val_ler_ep = self.run_tfrecord_epoch(
+                        session=sess,
+                        iterator=val_iterator,
+                        epoch=epoch,
+                        use_tensorboard=use_tensorboard,
+                        tensorboard_writer=val_writer,
+                        feed_dict={self.tf_is_traing_pl: False}
+                    )
+
+                    print('----------------------------------------------------')
+                    print("VALIDATION: loss %f, ler %f, validation time %.2fmin" %
+                          (val_loss_ep,
+                           val_ler_ep,
+                           (time.time() - val_epoch_time) / 60))
+                    print('----------------------------------------------------')
+
+            # save result
+            self.save_checkpoint(sess)
+            self.save_model(sess)
+
+            sess.close()
+
+    def validate(self, features, labels, show_partial: bool = True, batch_size: int = 1):
+        with self.graph.as_default():
+            sess = tf.Session(graph=self.graph)
+            sess.run(tf.global_variables_initializer())
+            self.load_checkpoint(sess)
+
+            acum_loss, acum_ler = self.run_epoch(
+                session=sess,
+                features=features,
+                labels=labels,
+                batch_size=batch_size,
+                epoch=0,
+                use_tensorboard=False,
+                tensorboard_writer=None,
+                feed_dict={self.tf_is_traing_pl: False}
+            )
+
+            print("Validation ler: %f, loss: %f" % (acum_ler, acum_loss))
+
+            sess.close()
+
+            return acum_ler / len(labels), acum_loss / len(labels)
 
     def validate_tfrecord(self, val_iterator):
-        raise NotImplementedError("Implement validation method")
+        with self.graph.as_default():
+            sess = tf.Session(graph=self.graph)
+            sess.run(tf.global_variables_initializer())
+            self.load_checkpoint(sess)
+
+            val_epoch_time = time.time()
+
+            val_loss_ep, val_ler_ep = self.run_tfrecord_epoch(
+                session=sess,
+                iterator=val_iterator,
+                epoch=0,
+                use_tensorboard=False,
+                tensorboard_writer=None,
+                feed_dict={self.tf_is_traing_pl: False}
+            )
+
+            print('----------------------------------------------------')
+            print("VALIDATION: loss %f, ler %f, validation time %.2fmin" %
+                  (val_loss_ep,
+                   val_ler_ep,
+                   (time.time() - val_epoch_time) / 60))
+            print('----------------------------------------------------')
+
+            return val_ler_ep, val_loss_ep
+
+    def predict(self, feature):
+        raise NotImplementedError("Implement prediction method")
 
     def predict_tfrecord(self, feature):
         raise NotImplementedError("Implement prediction method")
