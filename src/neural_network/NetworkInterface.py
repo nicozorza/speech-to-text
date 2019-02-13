@@ -84,6 +84,23 @@ class NetworkInterface:
                            tensorboard_writer, feed_dict=None):
         raise NotImplementedError("Override this method for the custom network")
 
+    def create_tfrecord_dataset(self, files_list, map_fn, batch_size, label_pad, shuffle_buffer=None):
+        with self.graph.as_default():
+            dataset = tf.data.TFRecordDataset(files_list)
+            dataset = dataset.map(map_fn)
+            dataset = dataset.padded_batch(
+                batch_size=batch_size,
+                padded_shapes=((None, self.network_data.num_features), [None], (), ()),
+                padding_values=(tf.constant(value=0, dtype=tf.float32),
+                                tf.constant(value=label_pad, dtype=tf.int64),
+                                tf.constant(value=0, dtype=tf.int64),
+                                tf.constant(value=0, dtype=tf.int64),
+                                )
+            )
+            if shuffle_buffer is not None:
+                dataset = dataset.shuffle(shuffle_buffer)
+            return dataset
+
     def train(self,
               train_features,
               train_labels,

@@ -83,46 +83,13 @@ num_tests_predictions = 5
 
 ###########################################################################################################
 
+train_dataset = network.create_tfrecord_dataset(train_files, Database.tfrecord_parse_dense_fn, train_batch_size,
+                                                label_pad=LASLabel.PAD_INDEX, shuffle_buffer=shuffle_buffer)
+val_dataset = network.create_tfrecord_dataset(val_files, Database.tfrecord_parse_dense_fn, val_batch_size,
+                                              label_pad=LASLabel.PAD_INDEX)
+test_dataset = network.create_tfrecord_dataset(test_files, Database.tfrecord_parse_dense_fn, test_batch_size,
+                                               label_pad=LASLabel.PAD_INDEX)
 with network.graph.as_default():
-    # Train dataset
-    train_dataset = tf.data.TFRecordDataset(train_files)
-    train_dataset = train_dataset.map(Database.tfrecord_parse_dense_fn)
-    train_dataset = train_dataset.padded_batch(
-        batch_size=train_batch_size,
-        padded_shapes=((None, network_data.num_features), [None], (), ()),
-        padding_values=(tf.constant(value=0, dtype=tf.float32),
-                        tf.constant(value=LASLabel.PAD_INDEX, dtype=tf.int64),
-                        tf.constant(value=0, dtype=tf.int64),
-                        tf.constant(value=0, dtype=tf.int64),
-                        )
-    )
-    train_dataset = train_dataset.shuffle(shuffle_buffer)
-
-    # Validation dataset
-    val_dataset = tf.data.TFRecordDataset(val_files)
-    val_dataset = val_dataset.map(Database.tfrecord_parse_dense_fn)
-    val_dataset = val_dataset.padded_batch(
-        batch_size=val_batch_size,
-        padded_shapes=((None, network_data.num_features), [None], (), ()),
-        padding_values=(tf.constant(value=0, dtype=tf.float32),
-                        tf.constant(value=LASLabel.PAD_INDEX, dtype=tf.int64),
-                        tf.constant(value=0, dtype=tf.int64),
-                        tf.constant(value=0, dtype=tf.int64),
-                        )
-    )
-
-    # Test dataset
-    test_dataset = tf.data.TFRecordDataset(test_files)
-    test_dataset = test_dataset.map(Database.tfrecord_parse_dense_fn)
-    test_dataset = test_dataset.padded_batch(
-        batch_size=test_batch_size,
-        padded_shapes=((None, network_data.num_features), [None], (), ()),
-        padding_values=(tf.constant(value=0, dtype=tf.float32),
-                        tf.constant(value=LASLabel.PAD_INDEX, dtype=tf.int64),
-                        tf.constant(value=0, dtype=tf.int64),
-                        tf.constant(value=0, dtype=tf.int64),
-                        )
-    )
 
     iterator = tf.data.Iterator.from_structure(train_dataset.output_types, train_dataset.output_shapes)
     next_element = iterator.get_next()
