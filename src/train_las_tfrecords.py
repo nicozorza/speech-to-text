@@ -57,9 +57,13 @@ network_data.learning_rate_decay = 0.96
 
 network = LASNet(network_data)
 
-train_files = [project_data.TFRECORD_TRAIN_DATABASE_FILE]
-val_files = [project_data.TFRECORD_TRAIN_DATABASE_FILE]
-test_files = [project_data.TFRECORD_TRAIN_DATABASE_FILE]
+train_files = ['test_database_1.tfrecords']
+val_files = ['test_database_1.tfrecords']
+test_files = ['test_database_1.tfrecords']
+
+train_files = list(map(lambda x: 'data/' + x, train_files))
+val_files = list(map(lambda x: 'data/' + x, val_files))
+test_files = list(map(lambda x: 'data/' + x, test_files))
 
 
 restore_run = True
