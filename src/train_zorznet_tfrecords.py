@@ -60,9 +60,9 @@ network_data.optimizer = tf.train.AdamOptimizer(learning_rate=network_data.learn
 
 network = ZorzNet(network_data)
 
-train_files = ['asd.tfrecords']
-val_files = ['asd.tfrecords']
-test_files = ['asd.tfrecords']
+train_files = ['data/train_database.tfrecords']
+val_files = ['data/train_database.tfrecords']
+test_files = ['data/train_database.tfrecords']
 
 
 restore_run = True
@@ -116,6 +116,7 @@ network.create_graph(use_tfrecords=True,
 network.train_tfrecord(
     train_iterator,
     val_iterator=val_iterator,
+    val_freq=validate_freq,
     restore_run=restore_run,
     save_partial=save_partial,
     save_freq=save_freq,
