@@ -77,11 +77,11 @@ class NetworkInterface:
         raise NotImplementedError("Implement graph creation method")
 
     def run_epoch(self, session, features, labels, batch_size, epoch,
-                  use_tensorboard, tensorboard_writer, feed_dict=None):
+                  use_tensorboard, tensorboard_writer, feed_dict=None, train_flag=True):
         raise NotImplementedError("Override this method for the custom network")
 
     def run_tfrecord_epoch(self, session, iterator, epoch, use_tensorboard,
-                           tensorboard_writer, feed_dict=None):
+                           tensorboard_writer, feed_dict=None, train_flag=True):
         raise NotImplementedError("Override this method for the custom network")
 
     def create_tfrecord_dataset(self, files_list, map_fn, batch_size, label_pad, shuffle_buffer=None):
@@ -134,7 +134,8 @@ class NetworkInterface:
                     batch_size=batch_size,
                     epoch=epoch,
                     use_tensorboard=use_tensorboard and epoch % tensorboard_freq == 0,
-                    tensorboard_writer=train_writer
+                    tensorboard_writer=train_writer,
+                    train_flag=True
                 )
 
                 if save_partial:
@@ -194,7 +195,8 @@ class NetworkInterface:
                     iterator=train_iterator,
                     epoch=epoch,
                     use_tensorboard=use_tensorboard and epoch % tensorboard_freq == 0,
-                    tensorboard_writer=train_writer
+                    tensorboard_writer=train_writer,
+                    train_flag=True
                 )
 
                 if save_partial:
@@ -219,7 +221,8 @@ class NetworkInterface:
                         epoch=epoch,
                         use_tensorboard=use_tensorboard,
                         tensorboard_writer=val_writer,
-                        feed_dict={self.tf_is_traing_pl: False}
+                        feed_dict={self.tf_is_traing_pl: False},
+                        train_flag=False
                     )
 
                     print('----------------------------------------------------')
@@ -249,7 +252,8 @@ class NetworkInterface:
                 epoch=0,
                 use_tensorboard=False,
                 tensorboard_writer=None,
-                feed_dict={self.tf_is_traing_pl: False}
+                feed_dict={self.tf_is_traing_pl: False},
+                train_flag=False
             )
 
             print("Validation ler: %f, loss: %f" % (acum_ler, acum_loss))
@@ -272,7 +276,8 @@ class NetworkInterface:
                 epoch=0,
                 use_tensorboard=False,
                 tensorboard_writer=None,
-                feed_dict={self.tf_is_traing_pl: False}
+                feed_dict={self.tf_is_traing_pl: False},
+                train_flag=False
             )
 
             print('----------------------------------------------------')

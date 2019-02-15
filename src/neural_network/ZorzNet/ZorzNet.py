@@ -175,7 +175,7 @@ class ZorzNet(NetworkInterface):
             self.merged_summary = tf.summary.merge_all()
 
     def run_tfrecord_epoch(self, session, iterator, epoch, use_tensorboard,
-                           tensorboard_writer, feed_dict=None):
+                           tensorboard_writer, feed_dict=None, train_flag=True):
         loss_ep = 0
         ler_ep = 0
         n_step = 0
@@ -188,7 +188,10 @@ class ZorzNet(NetworkInterface):
 
         try:
             while True:
-                loss, _, ler = session.run([self.loss, self.train_op, self.ler], feed_dict=feed_dict)
+                if train_flag:
+                    loss, _, ler = session.run([self.loss, self.train_op, self.ler], feed_dict=feed_dict)
+                else:
+                    loss, ler = session.run([self.loss, self.ler], feed_dict=feed_dict)
                 loss_ep += loss
                 ler_ep += ler
                 n_step += 1
@@ -199,7 +202,7 @@ class ZorzNet(NetworkInterface):
         return loss_ep / n_step, ler_ep / n_step
 
     def run_epoch(self, session, features, labels, batch_size, epoch,
-                  use_tensorboard, tensorboard_writer, feed_dict=None):
+                  use_tensorboard, tensorboard_writer, feed_dict=None, train_flag=True):
         loss_ep = 0
         ler_ep = 0
         n_step = 0
@@ -229,7 +232,10 @@ class ZorzNet(NetworkInterface):
                 tensorboard_writer.add_summary(s, epoch)
                 use_tensorboard = False     # Only on one batch
 
-            loss, _, ler = session.run([self.loss, self.train_op, self.ler], feed_dict=input_feed_dict)
+            if train_flag:
+                loss, _, ler = session.run([self.loss, self.train_op, self.ler], feed_dict=input_feed_dict)
+            else:
+                loss, ler = session.run([self.loss, self.ler], feed_dict=input_feed_dict)
 
             loss_ep += loss
             ler_ep += ler
