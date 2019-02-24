@@ -6,7 +6,7 @@ def model_fn(features, labels, mode, params):
 
     feature = features['feature']
     feat_len = features['feat_len']
-    sparse_target = features['sparse_target']
+    sparse_target = labels
 
     global_step = tf.train.get_global_step()
 

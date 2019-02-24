@@ -14,7 +14,7 @@ def data_input_fn(filenames, batch_size, parse_fn, shuffle_buffer, num_features,
                         )
     )
     dataset = dataset.shuffle(shuffle_buffer).repeat(num_epochs)
-    # iterator = tf.data.Iterator.from_structure(train_dataset.output_types, train_dataset.output_shapes)
+
     iterator = dataset.make_one_shot_iterator()
     next_element = iterator.get_next()
     feature, target, feat_len, target_len = next_element
@@ -22,7 +22,5 @@ def data_input_fn(filenames, batch_size, parse_fn, shuffle_buffer, num_features,
     feat_len = tf.cast(feat_len, dtype=tf.int32)
     target = tf.cast(target, tf.int32)
     sparse_target = tf.contrib.layers.dense_to_sparse(target, eos_token=-1)
-    # init_iterator = iterator.initializer
-    # val_iterator = iterator.make_initializer(val_dataset)
-    # test_iterator = iterator.make_initializer(test_dataset)
-    return {'feature': feature, 'feat_len': feat_len, 'sparse_target': sparse_target}, sparse_target
+
+    return {'feature': feature, 'feat_len': feat_len}, sparse_target
