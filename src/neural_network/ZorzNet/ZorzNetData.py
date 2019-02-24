@@ -42,3 +42,5 @@ class ZorzNetData(NetworkDataInterface):
 
         self.decoder_function: None
 
+    def as_dict(self):
+        return self.__dict__
