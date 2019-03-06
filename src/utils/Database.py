@@ -280,3 +280,16 @@ class Database:
 
         return dataset
 
+    def build_vocab(self, word_level: bool = False):
+        s = set()
+
+        for item in self:
+            if word_level:
+                item_list = item.label.word_list
+            else:
+                item_list = item.label.character_list
+            s.update(item_list)
+
+        return sorted(list(s))
+
+

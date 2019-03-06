@@ -1,4 +1,6 @@
 import re
+from typing import List
+
 import numpy as np
 from src.utils.Label import Label
 
@@ -6,15 +8,15 @@ from src.utils.Label import Label
 class LASLabel(Label):
     # Constants
     SPACE_TOKEN = '<space>'
-    SPACE_INDEX = 0
+    SPACE_INDEX = 3
     SOS_TOKEN = '<sos>'
     SOS_INDEX = 1
     EOS_TOKEN = '<eos>'
     EOS_INDEX = 2
-    PAD_TOKEN = '<pad>'
-    PAD_INDEX = 3
+    UNK_TOKEN = '<pad>'
+    UNK_INDEX = 0
 
-    FIRST_INDEX = ord('a') - 1 - PAD_INDEX  # 0 is reserved to space
+    FIRST_INDEX = ord('a') - 1 - SPACE_INDEX  # 0 is reserved to space
 
     # a-z (26), space (1) , eos (1), sos (1), pad (1) -> 30
     num_classes = ord('z') - ord('a') + 5
@@ -33,20 +35,28 @@ class LASLabel(Label):
     def transcription(self) -> str:
         return self.__text
 
+    @property
+    def character_list(self) -> List[str]:
+        return list(self.transcription)
+
+    @property
+    def word_list(self) -> List[str]:
+        return self.__targets
+
     def to_index(self) -> np.ndarray:
         if self.__indices is None:
             # Adding blank label
             index = list(np.hstack([self.SPACE_TOKEN if x == '' else list(x) for x in self.__targets]))
-            index = [self.SOS_TOKEN] + index + [self.EOS_TOKEN]
+            # index = [self.SOS_TOKEN] + index + [self.EOS_TOKEN]
             # Transform char into index
             index_list = []
             for x in index:
                 if x == self.SPACE_TOKEN:
                     index_list.append(self.SPACE_INDEX)
-                elif x == self.SOS_TOKEN:
-                    index_list.append(self.SOS_INDEX)
-                elif x == self.EOS_TOKEN:
-                    index_list.append(self.EOS_INDEX)
+                # elif x == self.SOS_TOKEN:
+                #     index_list.append(self.SOS_INDEX)
+                # elif x == self.EOS_TOKEN:
+                #     index_list.append(self.EOS_INDEX)
                 else:
                     index_list.append(ord(x) - self.FIRST_INDEX)
 
@@ -62,10 +72,10 @@ class LASLabel(Label):
         for x in seq:
             if x == LASLabel.SPACE_INDEX:
                 char_list.append(' ')
-            elif x == LASLabel.SOS_INDEX or x == LASLabel.EOS_INDEX or x == LASLabel.PAD_INDEX:
+            elif x == LASLabel.SOS_INDEX or x == LASLabel.EOS_INDEX or x == LASLabel.UNK_INDEX:
                 continue
             else:
-                char_list.append(chr(x + ord('a') - LASLabel.PAD_INDEX - 1))
+                char_list.append(chr(x + ord('a') - LASLabel.UNK_INDEX - 1))
         str_decoded = ''.join(char_list)
         # # Replacing blank label to none
         str_decoded = str_decoded.replace(chr(ord('z') + 1), '')
