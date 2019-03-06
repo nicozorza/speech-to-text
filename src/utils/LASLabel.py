@@ -13,7 +13,7 @@ class LASLabel(Label):
     SOS_INDEX = 1
     EOS_TOKEN = '<eos>'
     EOS_INDEX = 2
-    UNK_TOKEN = '<pad>'
+    UNK_TOKEN = '<unk>'
     UNK_INDEX = 0
 
     FIRST_INDEX = ord('a') - 1 - SPACE_INDEX  # 0 is reserved to space
