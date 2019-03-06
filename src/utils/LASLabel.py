@@ -75,7 +75,7 @@ class LASLabel(Label):
             elif x == LASLabel.SOS_INDEX or x == LASLabel.EOS_INDEX or x == LASLabel.UNK_INDEX:
                 continue
             else:
-                char_list.append(chr(x + ord('a') - LASLabel.UNK_INDEX - 1))
+                char_list.append(chr(x + ord('a') - LASLabel.SPACE_INDEX - 1))
         str_decoded = ''.join(char_list)
         # # Replacing blank label to none
         str_decoded = str_decoded.replace(chr(ord('z') + 1), '')
