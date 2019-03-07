@@ -77,10 +77,9 @@ def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_fw_cell_units: 
 def lstm_cell(size, activation, keep_prob=None, train_ph=False):
     cell = tf.nn.rnn_cell.LSTMCell(size, activation=activation)
 
-    if keep_prob is not None:
-        keep_prob_ph = tf.cond(train_ph, lambda: tf.constant(keep_prob), lambda: tf.constant(1.0))
-        cell = tf.nn.rnn_cell.DropoutWrapper(cell, input_keep_prob=keep_prob_ph,
-                                             output_keep_prob=keep_prob_ph, state_keep_prob=keep_prob_ph)
+    if keep_prob is not None and train_ph:
+        cell = tf.nn.rnn_cell.DropoutWrapper(cell, input_keep_prob=keep_prob,
+                                             output_keep_prob=keep_prob, state_keep_prob=keep_prob)
     return cell
 
 

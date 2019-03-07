@@ -2,6 +2,7 @@ import glob
 import os
 import pprint
 import tensorflow as tf
+from src.Estimators.las.model_fn_2 import las_model_fn
 from src.Estimators.las.data_input_fn import data_input_fn
 from src.Estimators.las.model_fn import model_fn
 from src.neural_network.LAS.LASNetData import LASNetData
@@ -35,21 +36,21 @@ network_data.kernel_init_1 = [tf.truncated_normal_initializer(mean=0, stddev=0.1
 network_data.bias_init_1 = [tf.zeros_initializer()] * network_data.num_dense_layers_1
 
 # TODO revisar relación entre listener_units y attend_units, y entre listener_layers y attend_layers
-network_data.listener_num_layers = 2
-network_data.listener_num_units = [64] * network_data.listener_num_layers
+network_data.listener_num_layers = 1
+network_data.listener_num_units = [256] * network_data.listener_num_layers
 network_data.listener_activation_list = [None] * network_data.listener_num_layers
 network_data.listener_keep_prob_list = [1.0] * network_data.listener_num_layers
 
-network_data.attention_num_layers = 1
-network_data.attention_units = 128
-network_data.attention_rnn_units = [128] * network_data.attention_num_layers
+network_data.attention_num_layers = 2
+network_data.attention_units = 10
+network_data.attention_rnn_units = [256] * network_data.attention_num_layers
 network_data.attention_activation_list = [None] * network_data.attention_num_layers
 network_data.attention_keep_prob_list = [1.0] * network_data.attention_num_layers
 
 network_data.kernel_regularizer = 0.0
-network_data.sampling_probability = 0.01
+network_data.sampling_probability = 0.2
 
-network_data.optimizer = tf.train.AdamOptimizer(learning_rate=0.0005)
+network_data.optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
 
 pprint.pprint(network_data.as_dict())
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -58,7 +59,7 @@ train_flag = True
 validate_flag = False
 test_flag = True
 
-restore_run = True
+restore_run = False
 model_dir = 'out/las_net/estimator/'
 
 train_files = ['data/train_database.tfrecords']
@@ -66,7 +67,7 @@ validate_files = ['data/train_database.tfrecords']
 test_files = ['data/train_database.tfrecords']
 
 train_batch_size = 10
-train_epochs = 50
+train_epochs = 10
 
 validate_batch_size = 1
 
@@ -79,13 +80,13 @@ if not restore_run:
 
 config = tf.estimator.RunConfig(
     model_dir=model_dir,
-    save_checkpoints_steps=5,
-    save_summary_steps=5,
+    save_checkpoints_steps=20,
+    save_summary_steps=20,
     log_step_count_steps=100)
 
 
 model = tf.estimator.Estimator(
-    model_fn=model_fn,
+    model_fn=las_model_fn,
     params=network_data.as_dict(),
     config=config
 )
@@ -131,9 +132,12 @@ if test_flag:
             sos_id=LASLabel.SOS_INDEX
         )
     )
-
+    count = 0
     for item in predictions:
-        pred = item
-        print(pred)
+        count += 1
+        if count >= 10:
+            break
+        pred = item['sample_ids']
+        # print(pred)
         print("Predicted: " + LASLabel.from_index(pred))
 
