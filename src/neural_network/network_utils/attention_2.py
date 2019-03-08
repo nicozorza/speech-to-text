@@ -1,18 +1,18 @@
 import tensorflow as tf
 
-from src.neural_network.network_utils import reshape_pyramidal
+from src.neural_network.network_utils import reshape_pyramidal, lstm_cell
 
 
-def lstm_cell(num_units, dropout, mode):
-    cell = tf.nn.rnn_cell.BasicLSTMCell(num_units)
-
-    dropout = dropout if mode == tf.estimator.ModeKeys.TRAIN else 1.0
-
-    if dropout > 0.0:
-        cell = tf.nn.rnn_cell.DropoutWrapper(
-            cell=cell, input_keep_prob=dropout)
-
-    return cell
+# def lstm_cell(num_units, dropout, mode):
+#     cell = tf.nn.rnn_cell.BasicLSTMCell(num_units)
+#
+#     dropout = dropout if mode == tf.estimator.ModeKeys.TRAIN else 1.0
+#
+#     if dropout > 0.0:
+#         cell = tf.nn.rnn_cell.DropoutWrapper(
+#             cell=cell, input_keep_prob=dropout)
+#
+#     return cell
 
 
 def bilstm(inputs,
@@ -22,9 +22,11 @@ def bilstm(inputs,
            mode):
 
     with tf.variable_scope('fw_cell'):
-        forward_cell = lstm_cell(num_units, dropout, mode)
+        forward_cell = lstm_cell(size=num_units, activation=None,
+                                 keep_prob=dropout, train_ph=mode == tf.estimator.ModeKeys.TRAIN)
     with tf.variable_scope('bw_cell'):
-        backward_cell = lstm_cell(num_units, dropout, mode)
+        backward_cell = lstm_cell(size=num_units, activation=None,
+                                  keep_prob=dropout, train_ph=mode == tf.estimator.ModeKeys.TRAIN)
 
     return tf.nn.bidirectional_dynamic_rnn(
         forward_cell,
@@ -90,7 +92,8 @@ def attend(encoder_outputs,
     cell_list = []
     for layer in range(num_layers):
         with tf.variable_scope('decoder_cell_'.format(layer)):
-            cell = lstm_cell(num_units=num_units,dropout=keep_prob, mode=mode)
+            cell = lstm_cell(size=num_units, activation=None,
+                             keep_prob=keep_prob, train_ph=mode == tf.estimator.ModeKeys.TRAIN)
 
         cell_list.append(cell)
 
