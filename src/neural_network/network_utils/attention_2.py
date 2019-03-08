@@ -1,5 +1,71 @@
 import tensorflow as tf
-from src.neural_network.network_utils import lstm_cell
+
+from src.neural_network.network_utils import reshape_pyramidal
+
+
+def lstm_cell(num_units, dropout, mode):
+    cell = tf.nn.rnn_cell.BasicLSTMCell(num_units)
+
+    dropout = dropout if mode == tf.estimator.ModeKeys.TRAIN else 1.0
+
+    if dropout > 0.0:
+        cell = tf.nn.rnn_cell.DropoutWrapper(
+            cell=cell, input_keep_prob=dropout)
+
+    return cell
+
+
+def bilstm(inputs,
+           sequence_length,
+           num_units,
+           dropout,
+           mode):
+
+    with tf.variable_scope('fw_cell'):
+        forward_cell = lstm_cell(num_units, dropout, mode)
+    with tf.variable_scope('bw_cell'):
+        backward_cell = lstm_cell(num_units, dropout, mode)
+
+    return tf.nn.bidirectional_dynamic_rnn(
+        forward_cell,
+        backward_cell,
+        inputs,
+        sequence_length=sequence_length,
+        dtype=tf.float32)
+
+
+def pyramidal_bilstm(inputs,
+                     sequence_length,
+                     mode,
+                     num_units,
+                     keep_prob,
+                     num_layers
+                     ):
+
+    outputs = inputs
+
+    for layer in range(num_layers):
+        with tf.variable_scope('bilstm_{}'.format(layer)):
+            outputs, state = bilstm(
+                outputs, sequence_length, num_units, keep_prob, mode)
+
+            outputs = tf.concat(outputs, -1)
+
+            if layer != 0:
+                outputs, sequence_length = reshape_pyramidal(
+                    outputs, sequence_length)
+
+    return (outputs, sequence_length), state
+
+
+def listener(encoder_inputs,
+             source_sequence_length,
+             mode,
+             num_units,
+             keep_prob,
+             num_layers):
+
+    return pyramidal_bilstm(encoder_inputs, source_sequence_length, mode,  num_units, keep_prob, num_layers)
 
 
 def attend(encoder_outputs,
@@ -24,8 +90,7 @@ def attend(encoder_outputs,
     cell_list = []
     for layer in range(num_layers):
         with tf.variable_scope('decoder_cell_'.format(layer)):
-            cell = lstm_cell(size=num_units, activation=None,
-                             keep_prob=keep_prob, train_ph=mode == tf.estimator.ModeKeys.TRAIN)
+            cell = lstm_cell(num_units=num_units,dropout=keep_prob, mode=mode)
 
         cell_list.append(cell)
 
@@ -141,51 +206,3 @@ def speller(encoder_outputs,
         decoder, maximum_iterations=maximum_iterations)
 
     return decoder_outputs, final_context_state, final_sequence_length
-
-
-def dense_to_sparse(tensor, eos_id, merge_repeated=True):
-    if merge_repeated:
-        added_values = tf.cast(
-            tf.fill((tf.shape(tensor)[0], 1), eos_id), tensor.dtype)
-
-        # merge consecutive values
-        concat_tensor = tf.concat((tensor, added_values), axis=-1)
-        diff = tf.cast(concat_tensor[:, 1:] - concat_tensor[:, :-1], tf.bool)
-
-        # trim after first eos token
-        eos_indices = tf.where(tf.equal(concat_tensor, eos_id))
-        first_eos = tf.segment_min(eos_indices[:, 1], eos_indices[:, 0])
-        mask = tf.sequence_mask(first_eos, maxlen=tf.shape(tensor)[1])
-
-        indices = tf.where(diff & mask & tf.not_equal(tensor, -1))
-        values = tf.gather_nd(tensor, indices)
-        shape = tf.shape(tensor, out_type=tf.int64)
-
-        return tf.SparseTensor(indices, values, shape)
-    else:
-        return tf.contrib.layers.dense_to_sparse(tensor, eos_id)
-
-
-def edit_distance(hypothesis, truth, eos_id, mapping=None):
-
-    if mapping:
-        mapping = tf.convert_to_tensor(mapping)
-        hypothesis = tf.nn.embedding_lookup(mapping, hypothesis)
-        truth = tf.nn.embedding_lookup(mapping, truth)
-
-    hypothesis = dense_to_sparse(hypothesis, eos_id, merge_repeated=True)
-    truth = dense_to_sparse(truth, eos_id, merge_repeated=True)
-
-    return tf.edit_distance(hypothesis, truth, normalize=True)
-
-
-def compute_loss(logits, targets, final_sequence_length, target_sequence_length, mode):
-
-    assert mode != tf.estimator.ModeKeys.PREDICT
-
-    target_weights = tf.sequence_mask(
-        target_sequence_length, dtype=tf.float32)
-    loss = tf.contrib.seq2seq.sequence_loss(
-        logits, targets, target_weights)
-
-    return loss

@@ -160,3 +160,71 @@ def greedy_decoder(input_cell, embedding, start_token, end_token, initial_state,
                                                                         swap_memory=False,
                                                                         scope=name)
     return outputs.sample_id
+
+
+def attention_loss(logits, targets, final_sequence_length, target_sequence_length, eos_id, train_ph):
+
+    if train_ph:
+        target_weights = tf.sequence_mask(target_sequence_length, dtype=tf.float32)
+        loss = tf.contrib.seq2seq.sequence_loss(logits, targets, target_weights)
+    else:
+        '''
+        # Reference: https://github.com/WindQAQ/listen-attend-and-spell
+        '''
+
+        max_ts = tf.reduce_max(target_sequence_length)
+        max_fs = tf.reduce_max(final_sequence_length)
+
+        max_sequence_length = tf.to_int32(tf.maximum(max_ts, max_fs))
+
+        logits = tf.slice(logits, begin=[0, 0, 0], size=[-1, max_fs, -1])
+
+        # pad EOS to make targets and logits have same shape
+        targets = tf.pad(targets, [[0, 0], [0, tf.maximum(
+            0, max_sequence_length - tf.shape(targets)[1])]], constant_values=eos_id)
+        logits = tf.pad(logits, [[0, 0], [0, tf.maximum(
+            0, max_sequence_length - tf.shape(logits)[1])], [0, 0]], constant_values=0)
+
+        # find larger length between predictions and targets
+        sequence_length = tf.reduce_max([target_sequence_length, final_sequence_length], 0)
+
+        target_weights = tf.sequence_mask(sequence_length, maxlen=max_sequence_length, dtype=tf.float32)
+
+        loss = tf.contrib.seq2seq.sequence_loss(logits, targets, target_weights)
+
+    return loss
+
+
+def dense_to_sparse(tensor, eos_id, merge_repeated=True):
+    if merge_repeated:
+        added_values = tf.cast(tf.fill((tf.shape(tensor)[0], 1), eos_id), tensor.dtype)
+
+        # merge consecutive values
+        concat_tensor = tf.concat((tensor, added_values), axis=-1)
+        diff = tf.cast(concat_tensor[:, 1:] - concat_tensor[:, :-1], tf.bool)
+
+        # trim after first eos token
+        eos_indices = tf.where(tf.equal(concat_tensor, eos_id))
+        first_eos = tf.segment_min(eos_indices[:, 1], eos_indices[:, 0])
+        mask = tf.sequence_mask(first_eos, maxlen=tf.shape(tensor)[1])
+
+        indices = tf.where(diff & mask & tf.not_equal(tensor, -1))
+        values = tf.gather_nd(tensor, indices)
+        shape = tf.shape(tensor, out_type=tf.int64)
+
+        return tf.SparseTensor(indices, values, shape)
+    else:
+        return tf.contrib.layers.dense_to_sparse(tensor, eos_id)
+
+
+def edit_distance(hypothesis, truth, eos_id, mapping=None):
+
+    if mapping:
+        mapping = tf.convert_to_tensor(mapping)
+        hypothesis = tf.nn.embedding_lookup(mapping, hypothesis)
+        truth = tf.nn.embedding_lookup(mapping, truth)
+
+    hypothesis = dense_to_sparse(hypothesis, eos_id, merge_repeated=True)
+    truth = dense_to_sparse(truth, eos_id, merge_repeated=True)
+
+    return tf.edit_distance(hypothesis, truth, normalize=True)

@@ -31,9 +31,10 @@ class LASNetData(NetworkDataInterface):
         self.listener_activation_list: List[int] = None
         self.listener_keep_prob_list: List[float] = None
 
+        self.attention_type: str = None
         self.attention_num_layers: int = None
         self.attention_units: int = None
-        self.attention_rnn_units: List[int] = None
+        self.attention_size: List[int] = None
         self.attention_activation_list: List[int] = None
         self.attention_keep_prob_list: List[float] = None
 
@@ -41,4 +42,6 @@ class LASNetData(NetworkDataInterface):
 
         self.clip_norm: int = None
 
+    def as_dict(self):
+        return self.__dict__
 

@@ -1,7 +1,8 @@
 import tensorflow as tf
 from src.neural_network import network_utils as net_utils
 from src.neural_network.network_utils import bidirectional_pyramidal_rnn
-from src.neural_network.network_utils.attention_2 import speller
+from src.neural_network.network_utils.attention_2 import speller, listener
+
 
 def las_model_fn(features,
                  labels,
@@ -23,17 +24,23 @@ def las_model_fn(features,
     tf.logging.info('Building listener')
 
     with tf.variable_scope('listener'):
-        encoder_outputs, source_sequence_length, encoder_state = bidirectional_pyramidal_rnn(
-            input_ph=encoder_inputs,
-            seq_len_ph=source_sequence_length,
-            num_layers=params['listener_num_layers'],
-            num_units=params['listener_num_units'],
-            name="listener",
-            activation_list=params['listener_activation_list'],
-            use_tensorboard=True,
-            tensorboard_scope="listener",
-            keep_prob=params['listener_keep_prob_list'],
-            train_ph=mode == tf.estimator.ModeKeys.TRAIN)
+        (encoder_outputs, source_sequence_length), encoder_state = listener(encoder_inputs,
+                 source_sequence_length,
+                 mode,
+                 params['listener_num_units'][0],
+                 0.9,
+                 params['listener_num_layers'])
+        # encoder_outputs, source_sequence_length, encoder_state = bidirectional_pyramidal_rnn(
+        #     input_ph=encoder_inputs,
+        #     seq_len_ph=source_sequence_length,
+        #     num_layers=params['listener_num_layers'],
+        #     num_units=params['listener_num_units'],
+        #     name="listener",
+        #     activation_list=params['listener_activation_list'],
+        #     use_tensorboard=True,
+        #     tensorboard_scope="listener",
+        #     keep_prob=params['listener_keep_prob_list'],
+        #     train_ph=mode == tf.estimator.ModeKeys.TRAIN)
 
     tf.logging.info('Building speller')
 
@@ -69,7 +76,7 @@ def las_model_fn(features,
         return tf.estimator.EstimatorSpec(mode, predictions=predictions)
 
     with tf.name_scope('metrics'):
-        edit_distance = net_utils.attention_2.edit_distance(
+        edit_distance = net_utils.attention.edit_distance(
             sample_ids, targets, params['eos_id'], None) #params.mapping)
 
         metrics = {
@@ -79,8 +86,9 @@ def las_model_fn(features,
     tf.summary.scalar('edit_distance', metrics['edit_distance'][1])
 
     with tf.name_scope('cross_entropy'):
-        loss = net_utils.attention_2.compute_loss(
-            logits, targets, final_sequence_length, target_sequence_length, mode)
+        loss = net_utils.attention.attention_loss(
+            logits, targets, final_sequence_length, target_sequence_length, params['eos_id'],
+            mode == tf.estimator.ModeKeys.TRAIN)
 
     if mode == tf.estimator.ModeKeys.EVAL:
         # with tf.name_scope('alignment'):

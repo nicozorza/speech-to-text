@@ -166,6 +166,8 @@ class LASNet(NetworkInterface):
                     tiled_listener_out_len = self.listener_out_len
                     tiled_batch_size = self.batch_size
 
+            self.projection_layer = Dense(self.network_data.num_classes, use_bias=True)
+
             with tf.variable_scope("attention", reuse=True):
 
                 tiled_cell, tiled_decoder_initial_state = attention_layer(
@@ -188,7 +190,7 @@ class LASNet(NetworkInterface):
                                                       start_token=start_tokens,
                                                       end_token=self.network_data.eos_id,
                                                       beam_width=self.network_data.beam_width,
-                                                      output_layer=Dense(self.network_data.num_classes),
+                                                      output_layer=self.projection_layer,
                                                       max_iterations=self.max_features_length,
                                                       name="attention",
                                                       time_major=False)
@@ -199,7 +201,7 @@ class LASNet(NetworkInterface):
                                                  initial_state=tiled_decoder_initial_state,
                                                  start_token=start_tokens,
                                                  end_token=self.network_data.eos_id,
-                                                 output_layer=Dense(self.network_data.num_classes),
+                                                 output_layer=self.projection_layer,
                                                  max_iterations=self.max_features_length,
                                                  name="attention",
                                                  time_major=False)
@@ -312,7 +314,7 @@ class LASNet(NetworkInterface):
             # Padding input to max_time_step of this batch
             batch_train_features, batch_train_seq_len = padSequences(batch_features)
             batch_train_labels, batch_train_labels_len = padSequences(batch_labels, dtype=np.int64,
-                                                                      value=LASLabel.PAD_INDEX)
+                                                                      value=LASLabel.UNK_INDEX)
 
             input_feed_dict = {
                 self.input_features: batch_train_features,

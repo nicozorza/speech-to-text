@@ -41,7 +41,7 @@ network_data.listener_num_units = [256] * network_data.listener_num_layers
 network_data.listener_activation_list = [None] * network_data.listener_num_layers
 network_data.listener_keep_prob_list = [1.0] * network_data.listener_num_layers
 
-network_data.attention_num_layers = 2
+network_data.attention_num_layers = 1
 network_data.attention_units = 10
 network_data.attention_rnn_units = [256] * network_data.attention_num_layers
 network_data.attention_activation_list = [None] * network_data.attention_num_layers
@@ -50,7 +50,7 @@ network_data.attention_keep_prob_list = [1.0] * network_data.attention_num_layer
 network_data.kernel_regularizer = 0.0
 network_data.sampling_probability = 0.2
 
-network_data.optimizer = tf.train.AdamOptimizer(learning_rate=0.01)
+network_data.optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
 
 pprint.pprint(network_data.as_dict())
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -59,7 +59,7 @@ train_flag = True
 validate_flag = False
 test_flag = True
 
-restore_run = False
+restore_run = True
 model_dir = 'out/las_net/estimator/'
 
 train_files = ['data/train_database.tfrecords']
@@ -67,7 +67,7 @@ validate_files = ['data/train_database.tfrecords']
 test_files = ['data/train_database.tfrecords']
 
 train_batch_size = 10
-train_epochs = 10
+train_epochs = 150
 
 validate_batch_size = 1
 
@@ -135,7 +135,7 @@ if test_flag:
     count = 0
     for item in predictions:
         count += 1
-        if count >= 10:
+        if count >= 20:
             break
         pred = item['sample_ids']
         # print(pred)
