@@ -24,23 +24,23 @@ def las_model_fn(features,
     tf.logging.info('Building listener')
 
     with tf.variable_scope('listener'):
-        (encoder_outputs, source_sequence_length), encoder_state = listener(encoder_inputs,
-                 source_sequence_length,
-                 mode,
-                 params['listener_num_units'][0],
-                 0.9,
-                 params['listener_num_layers'])
-        # encoder_outputs, source_sequence_length, encoder_state = bidirectional_pyramidal_rnn(
-        #     input_ph=encoder_inputs,
-        #     seq_len_ph=source_sequence_length,
-        #     num_layers=params['listener_num_layers'],
-        #     num_units=params['listener_num_units'],
-        #     name="listener",
-        #     activation_list=params['listener_activation_list'],
-        #     use_tensorboard=True,
-        #     tensorboard_scope="listener",
-        #     keep_prob=params['listener_keep_prob_list'],
-        #     train_ph=mode == tf.estimator.ModeKeys.TRAIN)
+        # (encoder_outputs, source_sequence_length), encoder_state = listener(encoder_inputs,
+        #          source_sequence_length,
+        #          mode,
+        #          params['listener_num_units'][0],
+        #          params['listener_keep_prob_list'][0],
+        #          params['listener_num_layers'])
+        encoder_outputs, source_sequence_length, encoder_state = bidirectional_pyramidal_rnn(
+            input_ph=encoder_inputs,
+            seq_len_ph=source_sequence_length,
+            num_layers=params['listener_num_layers'],
+            num_units=params['listener_num_units'],
+            name="listener",
+            activation_list=params['listener_activation_list'],
+            use_tensorboard=True,
+            tensorboard_scope="listener",
+            keep_prob=params['listener_keep_prob_list'],
+            train_ph=mode == tf.estimator.ModeKeys.TRAIN)
 
     tf.logging.info('Building speller')
 

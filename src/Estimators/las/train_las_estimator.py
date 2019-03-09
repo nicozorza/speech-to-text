@@ -9,6 +9,7 @@ from src.neural_network.LAS.LASNetData import LASNetData
 from src.utils.Database import Database
 from src.utils.LASLabel import LASLabel
 from src.utils.ProjectData import ProjectData
+import shutil
 
 # -------------------------------------------------------------------------------------------------------------------- #
 # Load project data
@@ -39,7 +40,7 @@ network_data.bias_init_1 = [tf.zeros_initializer()] * network_data.num_dense_lay
 network_data.listener_num_layers = 1
 network_data.listener_num_units = [256] * network_data.listener_num_layers
 network_data.listener_activation_list = [None] * network_data.listener_num_layers
-network_data.listener_keep_prob_list = [1.0] * network_data.listener_num_layers
+network_data.listener_keep_prob_list = [0.9] * network_data.listener_num_layers
 
 network_data.attention_num_layers = 1
 network_data.attention_units = 10
@@ -56,7 +57,7 @@ pprint.pprint(network_data.as_dict())
 # -------------------------------------------------------------------------------------------------------------------- #
 
 train_flag = True
-validate_flag = False
+validate_flag = True
 test_flag = True
 
 restore_run = True
@@ -67,21 +68,23 @@ validate_files = ['data/train_database.tfrecords']
 test_files = ['data/train_database.tfrecords']
 
 train_batch_size = 10
-train_epochs = 150
+train_epochs = 300
 
 validate_batch_size = 1
 
 # -------------------------------------------------------------------------------------------------------------------- #
 
 if not restore_run:
-    files = glob.glob(model_dir + '/*')
-    for f in files:
-        os.remove(f)
+    shutil.rmtree(model_dir)
+
+    # files = glob.glob(model_dir + '/*')
+    # for f in files:
+    #     os.remove(f)
 
 config = tf.estimator.RunConfig(
     model_dir=model_dir,
-    save_checkpoints_steps=20,
-    save_summary_steps=20,
+    save_checkpoints_steps=100,
+    save_summary_steps=100,
     log_step_count_steps=100)
 
 
@@ -135,6 +138,7 @@ if test_flag:
     count = 0
     for item in predictions:
         count += 1
+        # print(count)
         if count >= 20:
             break
         pred = item['sample_ids']
