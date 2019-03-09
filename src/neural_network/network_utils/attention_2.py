@@ -124,19 +124,9 @@ def speller(encoder_outputs,
             attention_size,
             num_attention_units,
             num_attention_layers,
-            keep_prob
+            keep_prob,
+            batch_size
             ):
-
-    batch_size = tf.shape(encoder_outputs)[0]
-
-    if mode == tf.estimator.ModeKeys.PREDICT and beam_width > 0:
-        encoder_outputs = tf.contrib.seq2seq.tile_batch(
-            encoder_outputs, multiplier=beam_width)
-        source_sequence_length = tf.contrib.seq2seq.tile_batch(
-            source_sequence_length, multiplier=beam_width)
-        encoder_state = tf.contrib.seq2seq.tile_batch(
-            encoder_state, multiplier=beam_width)
-        batch_size = batch_size * beam_width
 
     def embedding_fn(ids):
         # pass callable object to avoid OOM when using one-hot encoding

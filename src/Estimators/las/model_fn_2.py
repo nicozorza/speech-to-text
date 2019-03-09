@@ -44,6 +44,17 @@ def las_model_fn(features,
 
     tf.logging.info('Building speller')
 
+    with tf.variable_scope('tile_batch'):
+        batch_size = tf.shape(encoder_outputs)[0]
+        if mode == tf.estimator.ModeKeys.PREDICT and params['beam_width'] > 0:
+            encoder_outputs = tf.contrib.seq2seq.tile_batch(
+                encoder_outputs, multiplier=params['beam_width'])
+            source_sequence_length = tf.contrib.seq2seq.tile_batch(
+                source_sequence_length, multiplier=params['beam_width'])
+            encoder_state = tf.contrib.seq2seq.tile_batch(
+                encoder_state, multiplier=params['beam_width'])
+            batch_size = batch_size * params['beam_width']
+
     with tf.variable_scope('speller'):
         decoder_outputs, final_context_state, final_sequence_length = net_utils.attention_2.speller(
             encoder_outputs, encoder_state, decoder_inputs,
@@ -58,7 +69,9 @@ def las_model_fn(features,
             attention_size=params['attention_units'],
             num_attention_units=params['attention_rnn_units'][0],
             num_attention_layers=params['attention_num_layers'],
-            keep_prob=0.9)
+            keep_prob=0.9,
+            batch_size=batch_size
+        )
 
     with tf.name_scope('prediction'):
         if mode == tf.estimator.ModeKeys.PREDICT and params['beam_width'] > 0:
