@@ -53,35 +53,39 @@ def reshape_pyramidal(outputs, sequence_length):
     return concat_outputs, tf.floordiv(sequence_length, 2) + tf.floormod(sequence_length, 2)
 
 
-def attention_cell(input, num_layers: int, rnn_units_list: List[int], rnn_activations_list,
-                   attention_units, lengths, keep_prob, train_ph):
-
-    if keep_prob is None:
-        keep_prob = [None] * num_layers
+def attention_cell(input, lengths, num_layers: int, attention_units: int, attention_size: int, attention_type: str,
+                   activation, keep_prob, train_ph):
 
     cell = tf.nn.rnn_cell.MultiRNNCell(
-        [lstm_cell(rnn_units_list[_], rnn_activations_list[_], keep_prob[_], train_ph) for _ in range(num_layers)])
+        [lstm_cell(attention_units, activation, keep_prob, train_ph) for _ in range(num_layers)])
 
-    # TODO Add other mechanisms
-    attention_mechanism = tf.contrib.seq2seq.BahdanauAttention(num_units=attention_units,
-                                                               memory=input,
-                                                               memory_sequence_length=lengths,
-                                                               name='BahdanauAttention')
+    if attention_type is 'luong':
+        attention_mechanism = tf.contrib.seq2seq.LuongAttention(num_units=attention_units,
+                                                                memory=input,
+                                                                memory_sequence_length=lengths)
+    elif attention_type is 'bahdanau':
+        attention_mechanism = tf.contrib.seq2seq.BahdanauAttention(num_units=attention_units,
+                                                                   memory=input,
+                                                                   memory_sequence_length=lengths)
+    else:
+        raise ValueError('Invalid attention mechanism')
 
     return tf.contrib.seq2seq.AttentionWrapper(cell=cell,
                                                attention_mechanism=attention_mechanism,
-                                               attention_layer_size=None,
-                                               output_attention=False)
+                                               alignment_history=not train_ph,
+                                               attention_layer_size=attention_size,
+                                               output_attention=attention_type is 'luong')
 
 
-def attention_layer(input, num_layers: int, rnn_units_list: List[int], rnn_activations_list,
-                    attention_units, lengths, batch_size, keep_prob, train_ph, input_state=None):
+def attention_layer(input, lengths, num_layers: int, attention_units: int, activation,
+                    attention_size, attention_type: str, batch_size, keep_prob, train_ph, input_state=None):
     cell = attention_cell(input=input,
-                          num_layers=num_layers,
-                          rnn_units_list=rnn_units_list,
-                          rnn_activations_list=rnn_activations_list,
-                          attention_units=attention_units,
                           lengths=lengths,
+                          num_layers=num_layers,
+                          attention_units=attention_units,
+                          attention_size=attention_size,
+                          attention_type=attention_type,
+                          activation=activation,
                           keep_prob=keep_prob,
                           train_ph=train_ph)
 

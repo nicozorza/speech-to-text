@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from src.neural_network.network_utils import reshape_pyramidal, lstm_cell
+from src.neural_network.network_utils import reshape_pyramidal, lstm_cell, attention_cell, attention_layer
 
 
 # def lstm_cell(num_units, dropout, mode):
@@ -70,43 +70,43 @@ def listener(encoder_inputs,
     return pyramidal_bilstm(encoder_inputs, source_sequence_length, mode,  num_units, keep_prob, num_layers)
 
 
-def attend(encoder_outputs,
-           source_sequence_length,
-           mode,
-           attention_type,
-           attention_size,
-           num_units,
-           num_layers,
-           keep_prob):
-
-    memory = encoder_outputs
-
-    if attention_type == 'luong':
-        attention_fn = tf.contrib.seq2seq.LuongAttention
-    else:
-        attention_fn = tf.contrib.seq2seq.BahdanauAttention
-
-    attention_mechanism = attention_fn(
-        num_units, memory, source_sequence_length)
-
-    cell_list = []
-    for layer in range(num_layers):
-        with tf.variable_scope('decoder_cell_'.format(layer)):
-            cell = lstm_cell(size=num_units, activation=None,
-                             keep_prob=keep_prob, train_ph=mode == tf.estimator.ModeKeys.TRAIN)
-
-        cell_list.append(cell)
-
-    alignment_history = (mode != tf.estimator.ModeKeys.TRAIN)
-
-    decoder_cell = tf.nn.rnn_cell.MultiRNNCell(cell_list)
-
-    decoder_cell = tf.contrib.seq2seq.AttentionWrapper(
-        decoder_cell, attention_mechanism,
-        attention_layer_size=attention_size,
-        alignment_history=alignment_history)
-
-    return decoder_cell
+# def attend(encoder_outputs,
+#            source_sequence_length,
+#            mode,
+#            attention_type,
+#            attention_size,
+#            num_units,
+#            num_layers,
+#            keep_prob):
+#
+#     memory = encoder_outputs
+#
+#     if attention_type == 'luong':
+#         attention_fn = tf.contrib.seq2seq.LuongAttention
+#     else:
+#         attention_fn = tf.contrib.seq2seq.BahdanauAttention
+#
+#     attention_mechanism = attention_fn(
+#         num_units, memory, source_sequence_length)
+#
+#     cell_list = []
+#     for layer in range(num_layers):
+#         with tf.variable_scope('decoder_cell_'.format(layer)):
+#             cell = lstm_cell(size=num_units, activation=None,
+#                              keep_prob=keep_prob, train_ph=mode == tf.estimator.ModeKeys.TRAIN)
+#
+#         cell_list.append(cell)
+#
+#     alignment_history = (mode != tf.estimator.ModeKeys.TRAIN)
+#
+#     decoder_cell = tf.nn.rnn_cell.MultiRNNCell(cell_list)
+#
+#     decoder_cell = tf.contrib.seq2seq.AttentionWrapper(
+#         decoder_cell, attention_mechanism,
+#         attention_layer_size=attention_size,
+#         alignment_history=alignment_history)
+#
+#     return decoder_cell
 
 
 def speller(encoder_outputs,
@@ -120,12 +120,9 @@ def speller(encoder_outputs,
             target_vocab_size,
             sampling_probability,
             eos_id, sos_id,
-            attention_type,
-            attention_size,
-            num_attention_units,
-            num_attention_layers,
-            keep_prob,
-            batch_size
+            batch_size,
+            attention_cell,
+            initial_state
             ):
 
     def embedding_fn(ids):
@@ -140,19 +137,8 @@ def speller(encoder_outputs,
         else:
             return tf.one_hot(ids, target_vocab_size)
 
-    decoder_cell = attend(
-        encoder_outputs, source_sequence_length, mode,
-        attention_type=attention_type,
-        attention_size=attention_size,
-        num_units=num_attention_units,
-        num_layers=num_attention_layers,
-        keep_prob=keep_prob
-    )
-
     projection_layer = tf.layers.Dense(
         target_vocab_size, use_bias=True, name='projection_layer')
-
-    initial_state = decoder_cell.zero_state(batch_size, tf.float32)
 
     maximum_iterations = None
     if mode != tf.estimator.ModeKeys.TRAIN:
@@ -172,14 +158,14 @@ def speller(encoder_outputs,
                 decoder_inputs, target_sequence_length)
 
         decoder = tf.contrib.seq2seq.BasicDecoder(
-            decoder_cell, helper, initial_state, output_layer=projection_layer)
+            attention_cell, helper, initial_state, output_layer=projection_layer)
 
     elif mode == tf.estimator.ModeKeys.PREDICT and beam_width > 0:
         start_tokens = tf.fill(
             [tf.div(batch_size, beam_width)], sos_id)
 
         decoder = tf.contrib.seq2seq.BeamSearchDecoder(
-            cell=decoder_cell,
+            cell=attention_cell,
             embedding=embedding_fn,
             start_tokens=start_tokens,
             end_token=eos_id,
@@ -193,7 +179,7 @@ def speller(encoder_outputs,
             embedding_fn, start_tokens, eos_id)
 
         decoder = tf.contrib.seq2seq.BasicDecoder(
-            decoder_cell, helper, initial_state, output_layer=projection_layer)
+            attention_cell, helper, initial_state, output_layer=projection_layer)
 
     decoder_outputs, final_context_state, final_sequence_length = tf.contrib.seq2seq.dynamic_decode(
         decoder, maximum_iterations=maximum_iterations)

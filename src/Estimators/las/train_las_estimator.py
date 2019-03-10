@@ -43,10 +43,10 @@ network_data.listener_activation_list = [None] * network_data.listener_num_layer
 network_data.listener_keep_prob_list = [0.9] * network_data.listener_num_layers
 
 network_data.attention_num_layers = 1
-network_data.attention_units = 10
-network_data.attention_rnn_units = [256] * network_data.attention_num_layers
-network_data.attention_activation_list = [None] * network_data.attention_num_layers
-network_data.attention_keep_prob_list = [1.0] * network_data.attention_num_layers
+network_data.attention_size = 10
+network_data.attention_units = 256
+network_data.attention_activation = None
+network_data.attention_keep_prob = 0.9
 
 network_data.kernel_regularizer = 0.0
 network_data.sampling_probability = 0.2

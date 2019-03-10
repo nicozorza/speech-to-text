@@ -1,6 +1,6 @@
 import tensorflow as tf
 from src.neural_network import network_utils as net_utils
-from src.neural_network.network_utils import bidirectional_pyramidal_rnn
+from src.neural_network.network_utils import bidirectional_pyramidal_rnn, attention_layer
 from src.neural_network.network_utils.attention_2 import speller, listener
 
 
@@ -55,6 +55,21 @@ def las_model_fn(features,
                 encoder_state, multiplier=params['beam_width'])
             batch_size = batch_size * params['beam_width']
 
+    with tf.variable_scope('attention'):
+        attention_cell, initial_state = attention_layer(
+            input=encoder_outputs,
+            lengths=source_sequence_length,
+            num_layers=params['attention_num_layers'],
+            attention_units=params['attention_units'],
+            attention_size=params['attention_size'],
+            attention_type='luong',
+            activation=None,
+            keep_prob=params['attention_keep_prob'],
+            train_ph=mode == tf.estimator.ModeKeys.TRAIN,
+            batch_size=batch_size,
+            input_state=None
+        )
+
     with tf.variable_scope('speller'):
         decoder_outputs, final_context_state, final_sequence_length = net_utils.attention_2.speller(
             encoder_outputs, encoder_state, decoder_inputs,
@@ -65,12 +80,14 @@ def las_model_fn(features,
             target_vocab_size=params['num_classes'],
             sampling_probability=params['sampling_probability'],
             eos_id=params['eos_id'], sos_id=params['sos_id'],
-            attention_type='luong',
-            attention_size=params['attention_units'],
-            num_attention_units=params['attention_rnn_units'][0],
-            num_attention_layers=params['attention_num_layers'],
-            keep_prob=0.9,
-            batch_size=batch_size
+            # attention_type='luong',
+            # attention_size=params['attention_size'],
+            # num_attention_units=params['attention_units'],
+            # num_attention_layers=params['attention_num_layers'],
+            # keep_prob=params['attention_keep_prob'],
+            batch_size=batch_size,
+            attention_cell=attention_cell,
+            initial_state=initial_state
         )
 
     with tf.name_scope('prediction'):
