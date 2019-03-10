@@ -54,7 +54,7 @@ def reshape_pyramidal(outputs, sequence_length):
 
 
 def attention_cell(input, lengths, num_layers: int, attention_units: int, attention_size: int, attention_type: str,
-                   activation, keep_prob, train_ph):
+                   activation, keep_prob, train_ph, use_tensorboard=True, tensorboard_scope='attention_cell'):
 
     cell = tf.nn.rnn_cell.MultiRNNCell(
         [lstm_cell(attention_units, activation, keep_prob, train_ph) for _ in range(num_layers)])
@@ -70,6 +70,9 @@ def attention_cell(input, lengths, num_layers: int, attention_units: int, attent
     else:
         raise ValueError('Invalid attention mechanism')
 
+    if use_tensorboard:
+        tf.summary.histogram(tensorboard_scope, input)
+
     return tf.contrib.seq2seq.AttentionWrapper(cell=cell,
                                                attention_mechanism=attention_mechanism,
                                                alignment_history=not train_ph,
@@ -77,8 +80,9 @@ def attention_cell(input, lengths, num_layers: int, attention_units: int, attent
                                                output_attention=attention_type is 'luong')
 
 
-def attention_layer(input, lengths, num_layers: int, attention_units: int, activation,
-                    attention_size, attention_type: str, batch_size, keep_prob, train_ph, input_state=None):
+def attention_layer(input, lengths, num_layers: int, attention_units: int, activation, attention_size,
+                    attention_type: str, batch_size, keep_prob, train_ph, input_state=None,
+                    use_tensorboard=True, tensorboard_scope='attention_cell'):
     cell = attention_cell(input=input,
                           lengths=lengths,
                           num_layers=num_layers,
@@ -87,7 +91,9 @@ def attention_layer(input, lengths, num_layers: int, attention_units: int, activ
                           attention_type=attention_type,
                           activation=activation,
                           keep_prob=keep_prob,
-                          train_ph=train_ph)
+                          train_ph=train_ph,
+                          use_tensorboard=use_tensorboard,
+                          tensorboard_scope=tensorboard_scope)
 
     state = cell.zero_state(batch_size, tf.float32)
     if input_state is not None:
@@ -141,18 +147,18 @@ def greedy_decoder(inputs, embedding, start_token, end_token,
     return decoder
 
 
-def attention_loss(logits, targets, final_sequence_length, target_sequence_length, eos_id, train_ph):
+def attention_loss(logits, targets, logits_length, targets_length, eos_id, train_ph):
 
     if train_ph:
-        target_weights = tf.sequence_mask(target_sequence_length, dtype=tf.float32)
+        target_weights = tf.sequence_mask(targets_length, dtype=tf.float32)
         loss = tf.contrib.seq2seq.sequence_loss(logits, targets, target_weights)
     else:
         '''
         # Reference: https://github.com/WindQAQ/listen-attend-and-spell
         '''
 
-        max_ts = tf.reduce_max(target_sequence_length)
-        max_fs = tf.reduce_max(final_sequence_length)
+        max_ts = tf.reduce_max(targets_length)
+        max_fs = tf.reduce_max(logits_length)
 
         max_sequence_length = tf.to_int32(tf.maximum(max_ts, max_fs))
 
@@ -165,7 +171,7 @@ def attention_loss(logits, targets, final_sequence_length, target_sequence_lengt
             0, max_sequence_length - tf.shape(logits)[1])], [0, 0]], constant_values=0)
 
         # find larger length between predictions and targets
-        sequence_length = tf.reduce_max([target_sequence_length, final_sequence_length], 0)
+        sequence_length = tf.reduce_max([targets_length, logits_length], 0)
 
         target_weights = tf.sequence_mask(sequence_length, maxlen=max_sequence_length, dtype=tf.float32)
 
