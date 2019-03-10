@@ -42,6 +42,7 @@ network_data.listener_num_units = [256] * network_data.listener_num_layers
 network_data.listener_activation_list = [None] * network_data.listener_num_layers
 network_data.listener_keep_prob_list = [0.9] * network_data.listener_num_layers
 
+network_data.attention_type = 'luong'       # 'luong', 'bahdanau'
 network_data.attention_num_layers = 1
 network_data.attention_size = 10
 network_data.attention_units = 256

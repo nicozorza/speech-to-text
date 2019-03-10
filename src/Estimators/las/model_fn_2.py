@@ -1,7 +1,7 @@
 import tensorflow as tf
 from src.neural_network import network_utils as net_utils
-from src.neural_network.network_utils import bidirectional_pyramidal_rnn, attention_layer
-from src.neural_network.network_utils.attention_2 import speller, listener
+from src.neural_network.network_utils import bidirectional_pyramidal_rnn, attention_layer, attention_decoder, \
+    beam_search_decoder, greedy_decoder
 
 
 def las_model_fn(features,
@@ -24,12 +24,6 @@ def las_model_fn(features,
     tf.logging.info('Building listener')
 
     with tf.variable_scope('listener'):
-        # (encoder_outputs, source_sequence_length), encoder_state = listener(encoder_inputs,
-        #          source_sequence_length,
-        #          mode,
-        #          params['listener_num_units'][0],
-        #          params['listener_keep_prob_list'][0],
-        #          params['listener_num_layers'])
         encoder_outputs, source_sequence_length, encoder_state = bidirectional_pyramidal_rnn(
             input_ph=encoder_inputs,
             seq_len_ph=source_sequence_length,
@@ -62,8 +56,8 @@ def las_model_fn(features,
             num_layers=params['attention_num_layers'],
             attention_units=params['attention_units'],
             attention_size=params['attention_size'],
-            attention_type='luong',
-            activation=None,
+            attention_type=params['attention_type'],
+            activation=params['attention_activation'],
             keep_prob=params['attention_keep_prob'],
             train_ph=mode == tf.estimator.ModeKeys.TRAIN,
             batch_size=batch_size,
@@ -71,24 +65,59 @@ def las_model_fn(features,
         )
 
     with tf.variable_scope('speller'):
-        decoder_outputs, final_context_state, final_sequence_length = net_utils.attention_2.speller(
-            encoder_outputs, encoder_state, decoder_inputs,
-            source_sequence_length, target_sequence_length,
-            mode,
-            beam_width=params['beam_width'],
-            num_embeddings=params['num_embeddings'],
-            target_vocab_size=params['num_classes'],
-            sampling_probability=params['sampling_probability'],
-            eos_id=params['eos_id'], sos_id=params['sos_id'],
-            # attention_type='luong',
-            # attention_size=params['attention_size'],
-            # num_attention_units=params['attention_units'],
-            # num_attention_layers=params['attention_num_layers'],
-            # keep_prob=params['attention_keep_prob'],
-            batch_size=batch_size,
-            attention_cell=attention_cell,
-            initial_state=initial_state
-        )
+        def embedding_fn(ids):
+            if params['num_embeddings'] != 0:
+                target_embedding = tf.get_variable(
+                    name='target_embedding',
+                    shape=[params['num_classes'], params['num_embeddings']],
+                    dtype=tf.float32,
+                    initializer=tf.contrib.layers.xavier_initializer())
+                return tf.nn.embedding_lookup(target_embedding, ids)
+            else:
+                return tf.one_hot(ids, params['num_classes'])
+
+        projection_layer = tf.layers.Dense(params['num_classes'], use_bias=True, name='projection_layer')
+
+        maximum_iterations = None
+        if mode != tf.estimator.ModeKeys.TRAIN:
+            max_source_length = tf.reduce_max(source_sequence_length)
+            maximum_iterations = tf.to_int32(tf.round(tf.to_float(max_source_length) * 2))
+
+        if mode == tf.estimator.ModeKeys.TRAIN:
+            decoder_inputs = embedding_fn(decoder_inputs)
+
+            decoder = attention_decoder(
+                input_cell=attention_cell,
+                initial_state=initial_state,
+                embedding_fn=embedding_fn,
+                seq_embedding=decoder_inputs,
+                seq_embedding_len=target_sequence_length,
+                projection_layer=projection_layer,
+                sampling_prob=params['sampling_probability'])
+
+        elif mode == tf.estimator.ModeKeys.PREDICT and params['beam_width'] > 0:
+            decoder = beam_search_decoder(
+                input_cell=attention_cell,
+                embedding=embedding_fn,
+                start_token=params['sos_id'],
+                end_token=params['eos_id'],
+                initial_state=initial_state,
+                beam_width=params['beam_width'],
+                projection_layer=projection_layer,
+                batch_size=batch_size)
+        else:
+
+            decoder = greedy_decoder(
+                inputs=attention_cell,
+                embedding=embedding_fn,
+                start_token=params['sos_id'],
+                end_token=params['eos_id'],
+                initial_state=initial_state,
+                projection_layer=projection_layer,
+                batch_size=batch_size)
+
+        decoder_outputs, final_context_state, final_sequence_length = tf.contrib.seq2seq.dynamic_decode(
+            decoder, maximum_iterations=maximum_iterations)
 
     with tf.name_scope('prediction'):
         if mode == tf.estimator.ModeKeys.PREDICT and params['beam_width'] > 0:

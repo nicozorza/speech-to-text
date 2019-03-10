@@ -95,69 +95,50 @@ def attention_layer(input, lengths, num_layers: int, attention_units: int, activ
     return cell, state
 
 
-def attention_decoder(input_cell, initial_state, embedding, seq_embedding, seq_embedding_len,
-                      output_projection, max_iterations, sampling_prob, time_major, name):
-    # TODO Ver tf.contrib.legacy_seq2seq.attention_decoder para ver si es mejor que hacerlo a mano
-    helper = tf.contrib.seq2seq.ScheduledEmbeddingTrainingHelper(
-        inputs=seq_embedding,
-        sequence_length=seq_embedding_len,
-        embedding=embedding,
-        sampling_probability=sampling_prob,
-        time_major=time_major)
+def attention_decoder(input_cell, initial_state, embedding_fn, seq_embedding,
+                      seq_embedding_len, projection_layer, sampling_prob):
 
-    decoder = tf.contrib.seq2seq.BasicDecoder(cell=input_cell,
-                                              helper=helper,
-                                              initial_state=initial_state,
-                                              output_layer=output_projection)
+    if sampling_prob > 0.0:
+        helper = tf.contrib.seq2seq.ScheduledEmbeddingTrainingHelper(
+            seq_embedding, seq_embedding_len,
+            embedding_fn, sampling_prob)
+    else:
+        helper = tf.contrib.seq2seq.TrainingHelper(
+            seq_embedding, seq_embedding_len)
 
-    outputs, final_context_state, _ = tf.contrib.seq2seq.dynamic_decode(
-        decoder=decoder,
-        output_time_major=time_major,
-        maximum_iterations=max_iterations,
-        swap_memory=False,
-        impute_finished=True,
-        scope=name
-    )
+    decoder = tf.contrib.seq2seq.BasicDecoder(
+        input_cell, helper, initial_state, output_layer=projection_layer)
 
-    sample_id = outputs.sample_id
-    logits = outputs.rnn_output
-
-    return logits, sample_id, final_context_state
+    return decoder
 
 
 def beam_search_decoder(input_cell, embedding, start_token, end_token, initial_state,
-                        beam_width, output_layer, max_iterations, name, time_major=False):
-    decoder = tf.contrib.seq2seq.BeamSearchDecoder(cell=input_cell,
-                                                   embedding=embedding,
-                                                   start_tokens=start_token,
-                                                   end_token=end_token,
-                                                   initial_state=initial_state,
-                                                   beam_width=beam_width,
-                                                   output_layer=output_layer)
+                        beam_width, projection_layer, batch_size):
+    start_token = tf.fill([tf.div(batch_size, beam_width)], start_token)
 
-    outputs, final_context_state, _ = tf.contrib.seq2seq.dynamic_decode(decoder,
-                                                                        maximum_iterations=max_iterations,
-                                                                        output_time_major=time_major,
-                                                                        impute_finished=False,
-                                                                        swap_memory=False,
-                                                                        scope=name)
-    return outputs.predicted_ids
+    decoder = tf.contrib.seq2seq.BeamSearchDecoder(
+        cell=input_cell,
+        embedding=embedding,
+        start_tokens=start_token,
+        end_token=end_token,
+        initial_state=initial_state,
+        beam_width=beam_width,
+        output_layer=projection_layer)
+
+    return decoder
 
 
-def greedy_decoder(input_cell, embedding, start_token, end_token, initial_state, output_layer,
-                   max_iterations, name, time_major=False):
+def greedy_decoder(inputs, embedding, start_token, end_token,
+                   initial_state, projection_layer, batch_size):
+
+    start_token = tf.fill([batch_size], start_token)
+
     helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(embedding, start_token, end_token)
 
-    decoder = tf.contrib.seq2seq.BasicDecoder(input_cell, helper, initial_state,
-                                              output_layer=output_layer)
+    decoder = tf.contrib.seq2seq.BasicDecoder(inputs, helper, initial_state,
+                                              output_layer=projection_layer)
 
-    outputs, final_context_state, _ = tf.contrib.seq2seq.dynamic_decode(decoder,
-                                                                        maximum_iterations=max_iterations,
-                                                                        output_time_major=time_major,
-                                                                        impute_finished=False,
-                                                                        swap_memory=False,
-                                                                        scope=name)
-    return outputs.sample_id
+    return decoder
 
 
 def attention_loss(logits, targets, final_sequence_length, target_sequence_length, eos_id, train_ph):
