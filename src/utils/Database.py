@@ -220,6 +220,65 @@ class Database:
 
         writer.close()
 
+    def to_embedded_tfrecord(self, filename: str, word_level: bool = False):
+        writer = tf.python_io.TFRecordWriter(filename)
+
+        for item in self.__database:
+            feature_len, num_features = np.shape(item.item_feature.feature)
+
+            if word_level:
+                target = item.label.word_list
+            else:
+                target = item.label.character_list
+
+            target_len = len(target)
+
+            feats_list = [tf.train.Feature(float_list=tf.train.FloatList(value=frame))
+                          for frame in item.item_feature.feature]
+            target = tf.train.FeatureList(feature=[
+                tf.train.Feature(bytes_list=tf.train.BytesList(value=[p.encode()])) for p in target])
+
+            feat_dict = {"feature": tf.train.FeatureList(feature=feats_list), "target": target}
+            sequence_feats = tf.train.FeatureLists(feature_list=feat_dict)
+
+            # Context features for the entire sequence
+            feat_len = tf.train.Feature(int64_list=tf.train.Int64List(value=[feature_len]))
+            target_len = tf.train.Feature(int64_list=tf.train.Int64List(value=[target_len]))
+
+            context_feats = tf.train.Features(feature={"feat_len": feat_len,
+                                                       "target_len": target_len})
+
+            example = tf.train.SequenceExample(context=context_feats,
+                                               feature_lists=sequence_feats)
+
+            writer.write(example.SerializeToString())
+
+        writer.close()
+
+    @staticmethod
+    def embedded_tfrecord_parse_fn(num_features):
+        def parse_fn(example_proto):
+            context_features = {
+                "feat_len": tf.FixedLenFeature([], dtype=tf.int64),
+                "target_len": tf.FixedLenFeature([], dtype=tf.int64)
+            }
+            sequence_features = {
+                "feature": tf.FixedLenSequenceFeature(shape=[num_features], dtype=tf.float32),
+                "target": tf.FixedLenSequenceFeature(shape=[], dtype=tf.string)
+            }
+
+            # Parse the example (returns a dictionary of tensors)
+            context_parsed, sequence_parsed = tf.parse_single_sequence_example(
+                serialized=example_proto,
+                context_features=context_features,
+                sequence_features=sequence_features
+            )
+
+            return sequence_parsed["feature"], sequence_parsed["target"], \
+                   context_parsed["feat_len"], context_parsed["target_len"]
+
+        return parse_fn
+
     @staticmethod
     def tfrecord_parse_sparse_fn(example_proto):
         context_features = {
@@ -260,7 +319,7 @@ class Database:
 
     @staticmethod
     def dataset_dense_from_tfrecord(filename, batch_size, num_features,
-                              feats_padding_value=None, targets_padding_value=None):
+                                    feats_padding_value=None, targets_padding_value=None):
 
         dataset = tf.data.TFRecordDataset(filename)
         dataset = dataset.map(Database.tfrecord_parse_dense_fn)
@@ -280,7 +339,7 @@ class Database:
 
         return dataset
 
-    def build_vocab(self, word_level: bool = False):
+    def build_vocab(self, filename: str = None, word_level: bool = False):
         s = set()
 
         for item in self:
@@ -290,6 +349,16 @@ class Database:
                 item_list = item.label.character_list
             s.update(item_list)
 
-        return sorted(list(s))
+        s = sorted(list(s))
+        if filename is not None:
+            f = open(filename, "w")
+            [f.write(item + '\n') for item in s]
+            f.close()
+        return s
+
+    @staticmethod
+    def load_vocab(filename: str):
+        file = open(filename, 'r')
+        return [vocab.strip('\r\n') for vocab in file]
 
 
