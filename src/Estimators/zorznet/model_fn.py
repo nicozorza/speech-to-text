@@ -150,7 +150,7 @@ def model_fn(features, labels, mode, params):
         return tf.estimator.EstimatorSpec(
             mode=mode,
             loss=loss,
-            training_hooks=[logging_hook],
+            evaluation_hooks=[logging_hook],
             # eval_metric_ops=metrics
         )
 
