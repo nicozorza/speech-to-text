@@ -16,7 +16,7 @@ wav_dirs = [project_data.WAV_TRAIN_DIR, project_data.WAV_TEST_DIR]
 
 # Configuration of the features
 feature_config = FeatureConfig()
-feature_config.feature_type = 'deep_speech_mfcc'
+feature_config.feature_type = 'deep_speech_mfcc'    # 'mfcc', 'spec', 'log_spec', 'deep_speech_mfcc'
 feature_config.nfft = 1024
 feature_config.winlen = 20
 feature_config.winstride = 10
@@ -25,7 +25,11 @@ feature_config.num_filters = 40
 feature_config.num_ceps = 26
 feature_config.mfcc_window = np.hanning
 
-label_type = "classic"  # "classic", "las", "optim"
+label_type = "las"  # "classic", "las", "optim"
+use_embedding = False
+word_level = False
+vocab_file = project_data.VOCAB_FILE
+
 
 if label_type == "classic":
     label_class = ClassicLabel
@@ -73,11 +77,18 @@ for wav_dir in wav_dirs:
     print("Number of elements in database: " + str(len(database)))
 
     # Save the database into a file
-    features, labels = database.to_set()
     if wav_dir == project_data.WAV_TRAIN_DIR:
-        database.to_tfrecords(project_data.TFRECORD_TRAIN_DATABASE_FILE)
+        out_filename = project_data.TFRECORD_TRAIN_DATABASE_FILE
     else:
-        database.to_tfrecords(project_data.TFRECORD_TEST_DATABASE_FILE)
+        out_filename = project_data.TFRECORD_TEST_DATABASE_FILE
+
+    if not use_embedding:
+        database.to_tfrecords(out_filename)
+    else:
+        database.to_embedded_tfrecord(out_filename, word_level=word_level)
+
+    if wav_dir == project_data.WAV_TRAIN_DIR and use_embedding:
+        database.build_vocab(vocab_file, word_level)
 
     print("Databases saved")
 
