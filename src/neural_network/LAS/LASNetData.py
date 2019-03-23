@@ -5,13 +5,6 @@ from src.neural_network.NetworkInterface import NetworkDataInterface
 class LASNetData(NetworkDataInterface):
     def __init__(self):
 
-        self.adam_beta1: float = None
-        self.adam_beta2: float = None
-
-        self.use_learning_rate_decay: bool = None
-        self.learning_rate_decay_steps: int = None
-        self.learning_rate_decay: float = None
-
         self.num_embeddings = None
         self.sos_id = None
         self.eos_id = None
@@ -39,8 +32,6 @@ class LASNetData(NetworkDataInterface):
         self.attention_keep_prob: float = None
 
         self.kernel_regularizer: float = None
-
-        self.clip_norm: int = None
 
     def as_dict(self):
         return self.__dict__
