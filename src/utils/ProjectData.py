@@ -21,6 +21,8 @@ class ProjectData:
         self.TFRECORD_VAL_DATABASE_FILE = self.DATABASE_DIR + 'val_database.tfrecords'
         self.TFRECORD_TEST_DATABASE_FILE = self.DATABASE_DIR + 'test_database.tfrecords'
 
+        self.VOCAB_FILE = self.SOURCE_DIR + 'vocab_file.txt'
+
         self.OUT_DIR = 'out/'
 
         self.ZORZNET_CHECKPOINT_PATH = self.OUT_DIR + 'zorznet/' + 'checkpoint/model.ckpt'
