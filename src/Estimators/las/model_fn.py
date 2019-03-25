@@ -47,6 +47,20 @@ def model_fn(features,
             keep_prob=params['listener_keep_prob_list'],
             train_ph=mode == tf.estimator.ModeKeys.TRAIN)
 
+    with tf.name_scope("dense_layer_2"):
+        listener_output = dense_multilayer(input_ph=listener_output,
+                                           num_layers=params['num_dense_layers_2'],
+                                           num_units=params['num_units_2'],
+                                           name='dense_layer_2',
+                                           activation_list=params['dense_activations_2'],
+                                           use_batch_normalization=params['batch_normalization_2'],
+                                           train_ph=mode == tf.estimator.ModeKeys.TRAIN,
+                                           use_tensorboard=True,
+                                           keep_prob_list=params['keep_prob_2'],
+                                           kernel_initializers=params['kernel_init_2'],
+                                           bias_initializers=params['bias_init_2'],
+                                           tensorboard_scope='dense_layer_2')
+
     with tf.variable_scope('tile_batch'):
         batch_size = tf.shape(listener_output)[0]
         if mode == tf.estimator.ModeKeys.PREDICT and params['beam_width'] > 0:

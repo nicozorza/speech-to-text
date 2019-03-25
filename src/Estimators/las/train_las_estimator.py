@@ -25,12 +25,11 @@ network_data.eos_id = LASLabel.EOS_INDEX
 
 network_data.beam_width = 0
 
-tensorboard_scope='dense_layer_1'
-network_data.num_dense_layers_1 = 1
-network_data.num_units_1 = [400]
+network_data.num_dense_layers_1 = 2
+network_data.num_units_1 = [400, 400]
 network_data.dense_activations_1 = [tf.nn.relu] * network_data.num_dense_layers_1
 network_data.batch_normalization_1 = True
-network_data.keep_prob_1 = None
+network_data.keep_prob_1 = [0.9] * network_data.num_dense_layers_1
 network_data.kernel_init_1 = [tf.truncated_normal_initializer(mean=0, stddev=0.1)] * network_data.num_dense_layers_1
 network_data.bias_init_1 = [tf.zeros_initializer()] * network_data.num_dense_layers_1
 
@@ -39,14 +38,22 @@ network_data.listener_num_units = [256] * network_data.listener_num_layers
 network_data.listener_activation_list = [None] * network_data.listener_num_layers
 network_data.listener_keep_prob_list = [0.9] * network_data.listener_num_layers
 
+network_data.num_dense_layers_2 = 0
+network_data.num_units_2 = [200]
+network_data.dense_activations_2 = [tf.nn.relu] * network_data.num_dense_layers_2
+network_data.batch_normalization_2 = True
+network_data.keep_prob_2 = [0.9] * network_data.num_dense_layers_2
+network_data.kernel_init_2 = [tf.truncated_normal_initializer(mean=0, stddev=0.1)] * network_data.num_dense_layers_2
+network_data.bias_init_2 = [tf.zeros_initializer()] * network_data.num_dense_layers_2
+
 network_data.attention_type = 'luong'       # 'luong', 'bahdanau'
 network_data.attention_num_layers = 1
-network_data.attention_size = 10
+network_data.attention_size = None
 network_data.attention_units = 256
 network_data.attention_activation = None
 network_data.attention_keep_prob = 0.9
 
-network_data.kernel_regularizer = 0.1
+network_data.kernel_regularizer = 0.0
 network_data.sampling_probability = 0.2
 
 network_data.optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
@@ -54,26 +61,29 @@ network_data.optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
 pprint.pprint(network_data.as_dict())
 # -------------------------------------------------------------------------------------------------------------------- #
 
-train_flag = True
+train_flag = False
 validate_flag = True
 test_flag = True
 
 restore_run = True
 model_dir = 'out/las_net/estimator/'
 
-train_files = ['data/train_database_1.tfrecords']
-validate_files = ['data/train_database_1.tfrecords']
-test_files = ['data/train_database_1.tfrecords']
+train_files = ['data/train_database.tfrecords']
+validate_files = ['data/train_database.tfrecords']
+test_files = ['data/train_database.tfrecords']
 
-train_batch_size = 10
-train_epochs = 200
+train_batch_size = 1
+train_epochs = 10
 
 validate_batch_size = 1
 
 # -------------------------------------------------------------------------------------------------------------------- #
 
 if not restore_run:
-    shutil.rmtree(model_dir)
+    try:
+        shutil.rmtree(model_dir)
+    except:
+        pass
 
 config = tf.estimator.RunConfig(
     model_dir=model_dir,
@@ -136,6 +146,8 @@ if test_flag:
         if count >= 20:
             break
         pred = item['sample_ids']
-        # print(pred)
+        # print(item['target_truth'])
+        # print("Target: " + LASLabel.from_index(item['target_truth']))
         print("Predicted: " + LASLabel.from_index(pred))
+        print('')
 

@@ -24,6 +24,14 @@ class LASNetData(NetworkDataInterface):
         self.listener_activation_list: List[int] = None
         self.listener_keep_prob_list: List[float] = None
 
+        self.num_dense_layers_2: int = None
+        self.num_units_2: List[int] = list()
+        self.dense_activations_2: List[int] = list()
+        self.batch_normalization_2: bool = False
+        self.keep_prob_2: List[float] = None
+        self.kernel_init_2 = None
+        self.bias_init_2 = None
+
         self.attention_type: str = None
         self.attention_num_layers: int = None
         self.attention_units: int = None
