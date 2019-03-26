@@ -25,6 +25,8 @@ class ZorzNetData(NetworkDataInterface):
         self.num_bw_cell_units: List[int] = None
         self.cell_fw_activation: List[int] = list()
         self.cell_bw_activation: List[int] = list()
+        self.cell_fw_activation = None
+        self.cell_bw_activation = None
 
         self.rnn_output_sizes: List[int] = None
 
@@ -36,7 +38,6 @@ class ZorzNetData(NetworkDataInterface):
         self.kernel_init_2 = None
         self.bias_init_2 = None
 
-        self.use_dropout: bool = False
         self.rnn_regularizer: float = 0
         self.dense_regularizer: float = None
 
