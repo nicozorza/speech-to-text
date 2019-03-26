@@ -1,5 +1,5 @@
 #!/bin/bash
-# This scripts allows to convert the Sphere NIST WAV format to normal WAV format
+# This scripts allows to transform the Sphere NIST WAV format to normal WAV format
 
 if [ "$#" -eq 1 ]
 then

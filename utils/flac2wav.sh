@@ -1,5 +1,5 @@
 #!/bin/bash
-# This scripts allows to convert the audio files from .flac to .wav
+# This scripts allows to transform the audio files from .flac to .wav
 
 if [ "$#" -eq 1 ]
 then
