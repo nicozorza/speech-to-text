@@ -1,4 +1,6 @@
 import re
+from typing import List
+
 import numpy as np
 from src.utils.Label import Label
 
@@ -27,6 +29,14 @@ class ClassicLabel(Label):
     @property
     def transcription(self) -> str:
         return self.__text
+
+    @property
+    def character_list(self) -> List[str]:
+        return list(self.transcription)
+
+    @property
+    def word_list(self) -> List[str]:
+        return self.__targets
 
     def to_index(self) -> np.ndarray:
         if self.__indices is None:
