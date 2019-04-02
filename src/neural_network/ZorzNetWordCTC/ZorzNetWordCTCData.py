@@ -51,3 +51,6 @@ class ZorzNetWordCTCData(NetworkDataInterface):
         self.beam_width: int = None
         self.scoring_mode: str = None   # 'Words', 'NGrams', 'NGramsForecast', 'NGramsForecastAndSample'
         self.smoothing: float = None
+
+    def as_dict(self):
+        return self.__dict__
