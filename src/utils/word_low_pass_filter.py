@@ -27,3 +27,15 @@ def word_low_pass_filter(sentence: str, vocab_list: List[str]) -> str:
         filtered_word_list.append(filtered_word)
 
     return " ".join(filtered_word_list)
+
+
+def ler(prediction: str, truth: str) -> float:
+    max_len = max(len(truth), len(prediction))
+    return levenshtein(truth, prediction) / max_len
+
+
+def wer(prediction: str, truth: str) -> float:
+    prediction = prediction.split(' ')
+    truth = truth.split(' ')
+    max_len = max(len(truth), len(prediction))
+    return levenshtein(truth, prediction) / max_len
