@@ -1,6 +1,6 @@
 import argparse
 from src.utils.ProjectData import ProjectData
-from src.utils.word_low_pass_filter import ler, wer
+from src.utils.sentence_utils import ler, wer
 
 
 if __name__ == '__main__':
