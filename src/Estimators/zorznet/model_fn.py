@@ -132,6 +132,7 @@ def model_fn(features, labels, mode, params):
         ler = tf.reduce_mean(tf.edit_distance(hypothesis=tf.cast(decoded[0], tf.int32),
                                               truth=input_labels,
                                               normalize=True))
+        metrics = {'LER': tf.metrics.mean(ler), }
         tf.summary.scalar('label_error_rate', tf.reduce_mean(ler))
 
     logging_hook = tf.train.LoggingTensorHook({"loss": loss,
@@ -143,7 +144,7 @@ def model_fn(features, labels, mode, params):
             loss=loss,
             train_op=train_op,
             training_hooks=[logging_hook],
-            # eval_metric_ops=metrics
+            eval_metric_ops=metrics
         )
 
     if mode == tf.estimator.ModeKeys.EVAL:
@@ -151,7 +152,7 @@ def model_fn(features, labels, mode, params):
             mode=mode,
             loss=loss,
             evaluation_hooks=[logging_hook],
-            # eval_metric_ops=metrics
+            eval_metric_ops=metrics
         )
 
 
