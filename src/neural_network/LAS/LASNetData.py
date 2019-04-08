@@ -41,6 +41,10 @@ class LASNetData(NetworkDataInterface):
 
         self.kernel_regularizer: float = None
 
+        self.use_learning_rate_decay: bool = None
+        self.learning_rate_decay_steps: int = None
+        self.learning_rate_decay: float = None
+
     def as_dict(self):
         return self.__dict__
 

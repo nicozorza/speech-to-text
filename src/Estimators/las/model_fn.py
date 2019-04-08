@@ -15,6 +15,8 @@ def model_fn(features,
     targets = None
     targets_length = None
 
+    global_step = tf.train.get_global_step()
+
     if mode != tf.estimator.ModeKeys.PREDICT:
         decoder_inputs = labels['targets_inputs']
         targets = labels['targets_outputs']
@@ -204,18 +206,29 @@ def model_fn(features,
         return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics, evaluation_hooks=[logging_hook])
 
     with tf.name_scope('train'):
-        optimizer = params['optimizer']
-        # optimizer = tf.train.AdamOptimizer(params.learning_rate)
-        train_op = optimizer.minimize(
-            loss, global_step=tf.train.get_global_step())
+        if params['use_learning_rate_decay']:
+            learning_rate = tf.train.exponential_decay(
+                params['learning_rate'],
+                global_step,
+                decay_steps=params['learning_rate_decay_steps'],
+                decay_rate=params['learning_rate_decay'],
+                staircase=True)
+        else:
+            learning_rate = params['learning_rate']
+
+        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        train_op = optimizer.minimize(loss, global_step=global_step)
 
     logging_hook = tf.train.LoggingTensorHook(
         tensors={
             'loss': loss,
-            'LER': tf.reduce_mean(ler)},
+            'LER': tf.reduce_mean(ler),
+            'learning_rate': tf.reduce_mean(learning_rate)
+        },
         every_n_secs=10)
 
-    return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op, training_hooks=[logging_hook])
+    return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op,
+                                      training_hooks=[logging_hook], eval_metric_ops=metrics)
 
 
 
