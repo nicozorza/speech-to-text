@@ -124,9 +124,6 @@ def model_fn(features, labels, mode, params):
                + params['dense_regularizer'] * dense_loss
         tf.summary.scalar('loss', loss)
 
-    with tf.name_scope("training"):
-        train_op = params['optimizer'].minimize(loss, global_step=global_step)
-
     with tf.name_scope("label_error_rate"):
         # Inaccuracy: label error rate
         ler = tf.reduce_mean(tf.edit_distance(hypothesis=tf.cast(decoded[0], tf.int32),
@@ -139,11 +136,32 @@ def model_fn(features, labels, mode, params):
                                                "ler": ler}, every_n_iter=1)
 
     if mode == tf.estimator.ModeKeys.TRAIN:
+        if params['use_learning_rate_decay']:
+            learning_rate = tf.train.exponential_decay(
+                params['learning_rate'],
+                global_step,
+                decay_steps=params['learning_rate_decay_steps'],
+                decay_rate=params['learning_rate_decay'],
+                staircase=True)
+        else:
+            learning_rate = params['learning_rate']
+
+        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        train_op = optimizer.minimize(loss, global_step=global_step)
+
+        train_logging_hook = tf.train.LoggingTensorHook(
+            tensors={
+                'loss': loss,
+                'ler': tf.reduce_mean(ler),
+                'learning_rate': tf.reduce_mean(learning_rate)
+            },
+            every_n_secs=1)
+
         return tf.estimator.EstimatorSpec(
             mode=mode,
             loss=loss,
             train_op=train_op,
-            training_hooks=[logging_hook],
+            training_hooks=[train_logging_hook],
             eval_metric_ops=metrics
         )
 

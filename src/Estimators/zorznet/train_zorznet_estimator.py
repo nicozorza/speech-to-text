@@ -16,7 +16,7 @@ network_data.model_path = project_data.ZORZNET_MODEL_PATH
 network_data.checkpoint_path = project_data.ZORZNET_CHECKPOINT_PATH
 network_data.tensorboard_path = project_data.ZORZNET_TENSORBOARD_PATH
 
-network_data.num_classes = ClassicLabel.num_classes
+network_data.num_classes = ClassicLabel.num_classes - 1
 network_data.num_features = 494
 
 network_data.num_dense_layers_1 = 1
@@ -50,26 +50,27 @@ network_data.rnn_regularizer = 0.5
 network_data.decoder_function = tf.nn.ctc_greedy_decoder
 
 network_data.learning_rate = 0.001
-network_data.adam_epsilon = 0.0001
-network_data.optimizer = tf.train.AdamOptimizer(learning_rate=network_data.learning_rate, beta1=0.7, beta2=0.99)
+network_data.use_learning_rate_decay = True
+network_data.learning_rate_decay_steps = 2
+network_data.learning_rate_decay = 0.99
 
 # -------------------------------------------------------------------------------------------------------------------- #
 
-train_flag = False
-validate_flag = True
-test_flag = True
+train_flag = True
+validate_flag = False
+test_flag = False
 
-restore_run = True
+restore_run = False
 model_dir = 'out/zorznet/estimator/'
 
 train_files = ['data/train_database.tfrecords']
-validate_files = ['data/train_database.tfrecords']
-test_files = ['data/train_database.tfrecords']
+validate_files = ['data/test_database.tfrecords']
+test_files = ['data/test_database.tfrecords']
 
-train_batch_size = 1
-train_epochs = 10
+train_batch_size = 10
+train_epochs = 1
 
-validate_batch_size = 1
+validate_batch_size = 10
 
 
 if not restore_run:
@@ -84,7 +85,7 @@ config = tf.estimator.RunConfig(
     model_dir=model_dir,
     save_checkpoints_steps=5,
     save_summary_steps=5,
-    log_step_count_steps=1)
+    log_step_count_steps=5)
 
 
 model = tf.estimator.Estimator(
@@ -128,3 +129,4 @@ if test_flag:
 
     for item in predictions:
         print(ClassicLabel.from_index(item))
+        break
