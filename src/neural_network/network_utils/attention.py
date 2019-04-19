@@ -15,6 +15,7 @@ def bidirectional_pyramidal_rnn(input_ph, seq_len_ph, num_layers: int, num_units
 
     initial_state_fw = None
     initial_state_bw = None
+    state = None
 
     for n in range(num_layers):
         inputs, state = bidirectional_lstm(
