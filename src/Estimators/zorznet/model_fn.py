@@ -91,16 +91,17 @@ def model_fn(features, labels, mode, params):
 
     with tf.name_scope("decoder"):
         output_time_major = tf.transpose(dense_output, (1, 0, 2))
-        decoded, log_prob = tf.nn.ctc_greedy_decoder(output_time_major, input_features_length)
+        if params['beam_width'] == 0:
+            decoded, log_prob = tf.nn.ctc_greedy_decoder(output_time_major, input_features_length, merge_repeated=True)
+        else:
+            decoded, log_prob = tf.nn.ctc_beam_search_decoder(output_time_major, input_features_length,
+                                                              beam_width=params['beam_width'],
+                                                              top_paths=1,
+                                                              merge_repeated=False)
 
     if mode == tf.estimator.ModeKeys.PREDICT:
 
-        dense_decoded = tf.sparse_to_dense(
-            sparse_indices=decoded[0].indices,
-            sparse_values=decoded[0].values,
-            output_shape=decoded[0].dense_shape
-        )
-
+        dense_decoded = tf.sparse.to_dense(sp_input=decoded[0], validate_indices=True)
         return tf.estimator.EstimatorSpec(mode, predictions=dense_decoded)
 
     with tf.name_scope("loss"):

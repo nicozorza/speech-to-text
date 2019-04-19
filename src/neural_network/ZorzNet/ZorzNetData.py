@@ -41,7 +41,7 @@ class ZorzNetData(NetworkDataInterface):
         self.rnn_regularizer: float = 0
         self.dense_regularizer: float = None
 
-        self.decoder_function: None
+        self.beam_width: int = None
 
         self.use_learning_rate_decay: bool = None
         self.learning_rate_decay_steps: int = None

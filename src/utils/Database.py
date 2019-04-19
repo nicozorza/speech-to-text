@@ -303,17 +303,9 @@ class Database:
     def tfrecord_parse_dense_fn(example_proto):
         sparse_feature, sparse_target, feat_len, target_len = Database.tfrecord_parse_sparse_fn(example_proto)
 
-        feature = tf.sparse_to_dense(
-            sparse_indices=sparse_feature.indices,
-            sparse_values=sparse_feature.values,
-            output_shape=sparse_feature.dense_shape
-        )
+        feature = tf.sparse.to_dense(sparse_feature)
 
-        target = tf.sparse_to_dense(
-            sparse_indices=sparse_target.indices,
-            sparse_values=sparse_target.values,
-            output_shape=sparse_target.dense_shape
-        )
+        target = tf.sparse.to_dense(sparse_target)
 
         return feature, target, feat_len, target_len
 
