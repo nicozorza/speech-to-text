@@ -1,3 +1,5 @@
+import os
+
 import tensorflow as tf
 from src.neural_network.network_utils import bidirectional_pyramidal_rnn, attention_layer, attention_decoder, \
     beam_search_decoder, greedy_decoder, edit_distance, attention_loss, dense_multilayer
@@ -6,6 +8,7 @@ from src.neural_network.network_utils import bidirectional_pyramidal_rnn, attent
 def model_fn(features,
              labels,
              mode,
+             config,
              params):
 
     input_features = features['feature']
@@ -184,26 +187,35 @@ def model_fn(features,
         loss = attetion_loss + params['kernel_regularizer'] * kernel_loss
 
     if mode == tf.estimator.ModeKeys.EVAL:
-        # with tf.name_scope('alignment'):
-        #     attention_images = utils.create_attention_images(
-        #         final_context_state)
+        def _create_attention_images_summary(context_state):
+            """Reference: https://github.com/tensorflow/nmt/blob/master/nmt/attention_model.py"""
+            images = (context_state.alignment_history.stack())
+            # Reshape to (batch, src_seq_len, tgt_seq_len,1)
+            images = tf.expand_dims(tf.transpose(images, [1, 2, 0]), -1)
+            # Scale to range [0, 255]
+            images -= 1
+            images = -images
+            images *= 255
+            summary = tf.summary.image("attention_images", images)
+            return summary
+        with tf.name_scope('alignment'):
+            attention_summary = _create_attention_images_summary(final_context_state)
 
-        # attention_summary = tf.summary.image(
-        #     'attention_images', attention_images)
-
-        # eval_summary_hook = tf.train.SummarySaverHook(
-        #     save_steps=10,
-        #     output_dir=os.path.join(config.model_dir, 'eval'),
-        #     summary_op=attention_summary)
+        eval_summary_hook = tf.train.SummarySaverHook(
+            save_steps=10,
+            output_dir=os.path.join(config.model_dir, 'eval'),
+            summary_op=attention_summary)
 
         logging_hook = tf.train.LoggingTensorHook(
             tensors={
                 'LER': tf.reduce_mean(ler),
                 'max_predictions': sample_ids[tf.argmax(ler)],
-                'max_targets': targets[tf.argmax(ler)],},
+                'max_targets': targets[tf.argmax(ler)],
+            },
             every_n_iter=10)
 
-        return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics, evaluation_hooks=[logging_hook])
+        return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics,
+                                          evaluation_hooks=[logging_hook, eval_summary_hook])
 
     with tf.name_scope('train'):
         if params['use_learning_rate_decay']:
