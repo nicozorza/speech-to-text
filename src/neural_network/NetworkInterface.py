@@ -16,7 +16,7 @@ class NetworkDataInterface:
     num_features: int = None
     num_classes: int = None
 
-    optimizer: Optimizer = None
+    optimizer: str = None
     learning_rate: float = None
     adam_epsilon: float = None
 

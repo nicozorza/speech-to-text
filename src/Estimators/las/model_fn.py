@@ -228,8 +228,22 @@ def model_fn(features,
         else:
             learning_rate = params['learning_rate']
 
-        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
-        train_op = optimizer.minimize(loss, global_step=global_step)
+        if params['optimizer'] == 'sgd':
+            optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+        elif params['optimizer'] == 'momentum' and params['momentum'] is not None:
+            optimizer = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=params['momentum'])
+        elif params['optimizer'] == 'rms':
+            optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
+        else:
+            optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+
+        if params['clip_gradient'] != 0:
+            grads = tf.gradients(loss, tf.trainable_variables())
+            grads, _ = tf.clip_by_global_norm(grads, params['clip_gradient'])  # gradient clipping
+            grads_and_vars = list(zip(grads, tf.trainable_variables()))
+            train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
+        else:
+            train_op = optimizer.minimize(loss, global_step=global_step)
 
     logging_hook = tf.train.LoggingTensorHook(
         tensors={
