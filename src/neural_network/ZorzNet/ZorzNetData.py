@@ -47,5 +47,8 @@ class ZorzNetData(NetworkDataInterface):
         self.learning_rate_decay_steps: int = None
         self.learning_rate_decay: float = None
 
+        self.clip_gradient: int = None
+        self.momentum: float = None
+
     def as_dict(self):
         return self.__dict__

@@ -54,23 +54,27 @@ network_data.use_learning_rate_decay = True
 network_data.learning_rate_decay_steps = 1000
 network_data.learning_rate_decay = 0.99
 
+network_data.clip_gradient = 5
+network_data.optimizer = 'rms'      # 'rms', 'adam', 'momentum', 'sgd'
+network_data.momentum = None
+
 # -------------------------------------------------------------------------------------------------------------------- #
 
-train_flag = False
-validate_flag = False
+train_flag = True
+validate_flag = True
 test_flag = True
 
-restore_run = True
+restore_run = False
 model_dir = 'out/zorznet/estimator/'
 
 train_files = ['data/train_database.tfrecords']
 validate_files = ['data/train_database.tfrecords']
 test_files = ['data/train_database.tfrecords']
 
-train_batch_size = 2
-train_epochs = 10
+train_batch_size = 1
+train_epochs = 50
 
-validate_batch_size = 10
+validate_batch_size = 1
 
 
 if not restore_run:
