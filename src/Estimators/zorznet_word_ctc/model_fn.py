@@ -109,7 +109,7 @@ def model_fn(features, labels, mode, params):
                                                            word_chars.encode('utf8'))
 
         decoded_mask = tf.not_equal(decoded, params[
-            'num_classes'] - 1)  # ClassicLabel tiene 29 clases, por eso resto 2. Esta muy a ojo
+            'num_classes'] - 1)  # ClassicLabel tiene 29 clases, por eso resto 1. Esta muy a ojo
         decoded_mask.set_shape([None, None])
         decoded_mask = tf.boolean_mask(decoded, decoded_mask)
 
@@ -137,39 +137,60 @@ def model_fn(features, labels, mode, params):
                + params['dense_regularizer'] * dense_loss
         tf.summary.scalar('loss', loss)
 
-    with tf.name_scope("training"):
-        train_op = params['optimizer'].minimize(loss, global_step=global_step)
-
     with tf.name_scope("label_error_rate"):
-        # ler = tf.reduce_mean(tf.subtract(tf.sparse_to_dense(
-        #                                                sparse_indices=sparse_target.indices,
-        #                                                sparse_values=sparse_target.values,
-        #                                                output_shape=sparse_target.dense_shape),[decoded_mask] ))
         ler = tf.reduce_mean(tf.edit_distance(hypothesis=tf.cast(tf.contrib.layers.dense_to_sparse([decoded_mask]), tf.int32),
                                               truth=input_labels,
                                               normalize=True))
         metrics = {'LER': tf.metrics.mean(ler), }
 
     if mode == tf.estimator.ModeKeys.TRAIN:
-        logging_hook = tf.train.LoggingTensorHook({"loss": loss,
-                                                   "ler": ler
-                                                   }, every_n_iter=1)
+        if params['use_learning_rate_decay']:
+            learning_rate = tf.train.exponential_decay(
+                params['learning_rate'],
+                global_step,
+                decay_steps=params['learning_rate_decay_steps'],
+                decay_rate=params['learning_rate_decay'],
+                staircase=True)
+        else:
+            learning_rate = params['learning_rate']
+
+        if params['optimizer'] == 'sgd':
+            optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+        elif params['optimizer'] == 'momentum' and params['momentum'] is not None:
+            optimizer = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=params['momentum'])
+        elif params['optimizer'] == 'rms':
+            optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
+        else:
+            optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+
+        if params['clip_gradient'] != 0:
+            grads = tf.gradients(loss, tf.trainable_variables())
+            grads, _ = tf.clip_by_global_norm(grads, params['clip_gradient'])
+            grads_and_vars = list(zip(grads, tf.trainable_variables()))
+            train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
+        else:
+            train_op = optimizer.minimize(loss, global_step=global_step)
+
+        train_logging_hook = tf.train.LoggingTensorHook(
+            tensors={
+                'loss': loss,
+                'ler': tf.reduce_mean(ler),
+                'learning_rate': tf.reduce_mean(learning_rate)
+            },
+            every_n_secs=1)
+
         return tf.estimator.EstimatorSpec(
             mode=mode,
             loss=loss,
             train_op=train_op,
-            training_hooks=[logging_hook],
+            training_hooks=[train_logging_hook],
             eval_metric_ops=metrics
         )
 
     if mode == tf.estimator.ModeKeys.EVAL:
         logging_hook = tf.train.LoggingTensorHook({"loss": loss,
                                                    'max_predictions': decoded_mask,
-                                                   'max_targets': tf.sparse_to_dense(
-                                                       sparse_indices=sparse_target.indices,
-                                                       sparse_values=sparse_target.values,
-                                                       output_shape=sparse_target.dense_shape
-                                                   ),
+                                                   'max_targets': tf.sparse.to_dense(sparse_target),
                                                    "ler": ler}, every_n_iter=1)
         return tf.estimator.EstimatorSpec(
             mode=mode,

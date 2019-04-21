@@ -49,23 +49,28 @@ network_data.rnn_regularizer = 0.0
 
 network_data.decoder_function = tf.nn.ctc_greedy_decoder
 
-network_data.learning_rate = 0.001
-network_data.adam_epsilon = 0.0001
-network_data.optimizer = tf.train.AdamOptimizer(learning_rate=network_data.learning_rate, beta1=0.7, beta2=0.99)
-
 network_data.word_beam_search_path = 'src/Estimators/zorznet_word_ctc/aux/TFWordBeamSearch.so'
 network_data.word_char_list = 'abcdefghijklmnopqrstuvwxyz'
 # network_data.char_list_path = 'src/Estimators/zorznet_word_ctc/aux/charList.txt'
 network_data.corpus_path = 'src/Estimators/zorznet_word_ctc/aux/librispeech_corpus.txt'
 network_data.char_list = ' abcdefghijklmnopqrstuvwxyz'
 
-network_data.beam_width = 10
-network_data.scoring_mode = 'NGrams'   # 'Words', 'NGrams', 'NGramsForecast', 'NGramsForecastAndSample'
+network_data.beam_width = 20
+network_data.scoring_mode = 'NGramsForecast'   # 'Words', 'NGrams', 'NGramsForecast', 'NGramsForecastAndSample'
 network_data.smoothing = 0.01
+
+network_data.learning_rate = 0.001
+network_data.use_learning_rate_decay = True
+network_data.learning_rate_decay_steps = 1000
+network_data.learning_rate_decay = 0.99
+
+network_data.clip_gradient = 5
+network_data.optimizer = 'adam'      # 'rms', 'adam', 'momentum', 'sgd'
+network_data.momentum = None
 
 # -------------------------------------------------------------------------------------------------------------------- #
 
-train_flag = True
+train_flag = False
 validate_flag = True
 test_flag = True
 
@@ -77,7 +82,7 @@ validate_files = ['data/train_database.tfrecords']
 test_files = ['data/train_database.tfrecords']
 
 train_batch_size = 1
-train_epochs = 10
+train_epochs = 50
 
 validate_batch_size = 1
 
@@ -94,7 +99,7 @@ config = tf.estimator.RunConfig(
     model_dir=model_dir,
     save_checkpoints_steps=5,
     save_summary_steps=5,
-    log_step_count_steps=1)
+    log_step_count_steps=5)
 
 
 model = tf.estimator.Estimator(
@@ -151,15 +156,8 @@ if test_flag:
 
     count = 0
     for item in predictions:
-        # print(item)
+        print(item)
         print(decoder_output_to_text(item))
         count += 1
         if count >= 10:
             break
-
-    # print(decoder_output_to_text([ 1, 14,  4,  0,  9, 20,  0, 18,  5, 17, 21,  9, 18,  5,  4,  0, 14, 15,  0, 19,  8, 18,  5, 23, 4,  0,  7,
-    #                                21,  5, 19, 19,  9, 14,  7,  0, 20, 15,  0,  1, 18, 18,  9, 22,  5,  0,  1, 20,  0,
-    #   20,  8,  5,  0,  3, 15, 14,  3, 12, 21, 19,  9, 15, 14,  0, 20,  8,  1, 20,  0, 12,  9, 20, 20,
-    #   12,  5,  0, 16,  1, 20, 19, 25,  0, 23,  1, 19,  0,  4,  5, 19, 20,  9, 14,  5,  4,  0, 20, 15,
-    #    0,  9, 14,  8,  5, 18,  9, 20,  0, 19, 15, 13,  5,  0,  4,  1, 25,  0,  1, 12, 12,  0,  8,  9,
-    #   19,  0, 13,  9, 12, 12,  9, 15, 14, 19]))

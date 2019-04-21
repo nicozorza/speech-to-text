@@ -1,6 +1,4 @@
 from typing import List
-from tensorflow.python.training.optimizer import Optimizer
-
 from src.neural_network.NetworkInterface import NetworkDataInterface
 
 
@@ -51,6 +49,13 @@ class ZorzNetWordCTCData(NetworkDataInterface):
         self.beam_width: int = None
         self.scoring_mode: str = None   # 'Words', 'NGrams', 'NGramsForecast', 'NGramsForecastAndSample'
         self.smoothing: float = None
+
+        self.use_learning_rate_decay: bool = None
+        self.learning_rate_decay_steps: int = None
+        self.learning_rate_decay: float = None
+
+        self.clip_gradient: int = None
+        self.momentum: float = None
 
     def as_dict(self):
         return self.__dict__
