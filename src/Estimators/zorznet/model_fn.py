@@ -1,8 +1,9 @@
+import os
 import tensorflow as tf
 from src.neural_network.network_utils import dense_multilayer, bidirectional_rnn, unidirectional_rnn, dense_layer
 
 
-def model_fn(features, labels, mode, params):
+def model_fn(features, labels, mode, config, params):
 
     feature = features['feature']
     feat_len = features['feat_len']
@@ -98,10 +99,9 @@ def model_fn(features, labels, mode, params):
                                                               beam_width=params['beam_width'],
                                                               top_paths=1,
                                                               merge_repeated=False)
+        dense_decoded = tf.sparse.to_dense(sp_input=decoded[0], validate_indices=True)
 
     if mode == tf.estimator.ModeKeys.PREDICT:
-
-        dense_decoded = tf.sparse.to_dense(sp_input=decoded[0], validate_indices=True)
         return tf.estimator.EstimatorSpec(mode, predictions=dense_decoded)
 
     with tf.name_scope("loss"):
@@ -133,7 +133,13 @@ def model_fn(features, labels, mode, params):
         metrics = {'LER': tf.metrics.mean(ler), }
         tf.summary.scalar('label_error_rate', tf.reduce_mean(ler))
 
-    logging_hook = tf.train.LoggingTensorHook({"loss": loss, "ler": ler}, every_n_iter=1)
+    logging_hook = tf.train.LoggingTensorHook(
+        tensors={
+            "loss": loss,
+            "ler": ler,
+        },
+        every_n_iter=1
+    )
 
     if mode == tf.estimator.ModeKeys.TRAIN:
         if params['use_learning_rate_decay']:
@@ -180,10 +186,27 @@ def model_fn(features, labels, mode, params):
         )
 
     if mode == tf.estimator.ModeKeys.EVAL:
+        def _create_alignment_images_summary(outputs):
+            images = outputs
+            images = tf.expand_dims(images, -1)
+            # Scale to range [0, 255]
+            images -= 1
+            images = -images
+            images *= 255
+            summary = tf.summary.image("alignment_images", images)
+            return summary
+        with tf.name_scope('alignment'):
+            alignment_summary = _create_alignment_images_summary(dense_output)
+
+        eval_summary_hook = tf.train.SummarySaverHook(
+            save_steps=10,
+            output_dir=os.path.join(config.model_dir, 'eval'),
+            summary_op=alignment_summary)
+
         return tf.estimator.EstimatorSpec(
             mode=mode,
             loss=loss,
-            evaluation_hooks=[logging_hook],
+            evaluation_hooks=[logging_hook, eval_summary_hook],
             eval_metric_ops=metrics
         )
 
