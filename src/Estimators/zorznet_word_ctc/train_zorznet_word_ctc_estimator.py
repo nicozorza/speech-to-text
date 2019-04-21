@@ -28,13 +28,9 @@ network_data.kernel_init_1 = [tf.truncated_normal_initializer(mean=0, stddev=0.1
 network_data.bias_init_1 = [tf.zeros_initializer()] * network_data.num_dense_layers_1
 
 network_data.is_bidirectional = True
-# network_data.num_cell_units = [250]
-# network_data.cell_activation = [tf.nn.tanh]
-network_data.num_fw_cell_units = [256, 256]
-network_data.num_bw_cell_units = [256, 256]
-network_data.cell_fw_activation = [tf.nn.tanh] * 2
-network_data.cell_bw_activation = [tf.nn.tanh] * 2
-network_data.rnn_output_sizes = None
+network_data.num_cell_units = [256, 256]
+network_data.cell_activation = [tf.nn.tanh] * 2
+network_data.keep_prob_rnn = [0.8] * 2
 
 network_data.num_dense_layers_2 = 2
 network_data.num_units_2 = [150, 100]

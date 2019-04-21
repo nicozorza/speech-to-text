@@ -19,15 +19,8 @@ class ZorzNetWordCTCData(NetworkDataInterface):
         self.is_bidirectional: bool = False
 
         self.num_cell_units: List[int] = None
-        self.rnn_regularizer: float = 0
-        self.cell_activation: List[int] = list()
-
-        self.num_fw_cell_units: List[int] = None
-        self.num_bw_cell_units: List[int] = None
-        self.cell_fw_activation: List[int] = list()
-        self.cell_bw_activation: List[int] = list()
-
-        self.rnn_output_sizes: List[int] = None
+        self.cell_activation: List[int] = None
+        self.keep_prob_rnn: List[float] = None
 
         self.num_dense_layers_2: int = None
         self.num_dense_units_2: List[int] = list()
@@ -38,6 +31,7 @@ class ZorzNetWordCTCData(NetworkDataInterface):
         self.bias_init_2 = None
 
         self.dense_regularizer: float = None
+        self.rnn_regularizer: float = 0
 
         self.word_beam_search_path: str = None
         self.word_char_list_path: str = None

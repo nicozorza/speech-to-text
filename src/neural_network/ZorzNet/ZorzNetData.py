@@ -19,14 +19,8 @@ class ZorzNetData(NetworkDataInterface):
         self.is_bidirectional: bool = False
 
         self.num_cell_units: List[int] = None
-        self.cell_activation: List[int] = list()
-
-        self.num_fw_cell_units: List[int] = None
-        self.num_bw_cell_units: List[int] = None
-        self.cell_fw_activation: List[int] = list()
-        self.cell_bw_activation: List[int] = list()
-        self.cell_fw_activation = None
-        self.cell_bw_activation = None
+        self.cell_activation: List[int] = None
+        self.keep_prob_rnn: List[float] = None
 
         self.rnn_output_sizes: List[int] = None
 

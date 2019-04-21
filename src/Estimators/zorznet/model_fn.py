@@ -40,15 +40,14 @@ def model_fn(features, labels, mode, config, params):
             rnn_outputs = bidirectional_rnn(
                 input_ph=rnn_input,
                 seq_len_ph=input_features_length,
-                num_layers=len(params['num_fw_cell_units']),
-                num_fw_cell_units=params['num_fw_cell_units'],
-                num_bw_cell_units=params['num_bw_cell_units'],
-                name="RNN_cell",
-                activation_fw_list=params['cell_fw_activation'],
-                activation_bw_list=params['cell_bw_activation'],
+                num_layers=len(params['num_cell_units']),
+                num_cell_units=params['num_cell_units'],
+                activation_list=params['cell_activation'],
                 use_tensorboard=True,
                 tensorboard_scope='RNN',
-                output_size=params['rnn_output_sizes'])
+                train_ph=mode == tf.estimator.ModeKeys.TRAIN,
+                keep_prob_list=params['keep_prob_rnn']
+            )
 
         else:
             rnn_outputs = unidirectional_rnn(
@@ -56,11 +55,11 @@ def model_fn(features, labels, mode, config, params):
                 seq_len_ph=input_features_length,
                 num_layers=len(params['num_cell_units']),
                 num_cell_units=params['num_cell_units'],
-                name="RNN_cell",
                 activation_list=params['cell_activation'],
                 use_tensorboard=True,
                 tensorboard_scope='RNN',
-                output_size=params['rnn_output_sizes'])
+                train_ph=mode == tf.estimator.ModeKeys.TRAIN,
+                keep_prob_list=params['keep_prob_rnn'])
 
     with tf.name_scope("dense_layer_2"):
         rnn_outputs = dense_multilayer(input_ph=rnn_outputs,

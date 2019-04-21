@@ -2,78 +2,6 @@ from typing import List
 import tensorflow as tf
 
 
-def unidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_cell_units: List[int], name: str, activation_list,
-                       output_size: List[int] = None, use_tensorboard: bool = True, tensorboard_scope: str = None):
-    if output_size is None:
-        output_size = [None] * num_layers
-
-    if activation_list is None:
-        activation_list = [None] * num_layers
-
-    rnn_cell = [tf.nn.rnn_cell.LSTMCell(num_units=num_cell_units[_],
-                                        state_is_tuple=True,
-                                        name=name + '_{}'.format(_),
-                                        activation=activation_list[_],
-                                        num_proj=output_size[_]
-                                        ) for _ in range(num_layers)]
-
-    multi_rrn_cell = tf.nn.rnn_cell.MultiRNNCell(rnn_cell, state_is_tuple=True)
-
-    input_ph, _ = tf.nn.dynamic_rnn(cell=multi_rrn_cell,
-                                    inputs=input_ph,
-                                    sequence_length=seq_len_ph,
-                                    dtype=tf.float32,
-                                    scope=name)
-    if use_tensorboard:
-        tf.summary.histogram(tensorboard_scope, input_ph)
-
-    return input_ph
-
-
-def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_fw_cell_units: List[int], num_bw_cell_units: List[int],
-                      name: str, activation_fw_list, activation_bw_list, output_size: List[int] = None,
-                      use_tensorboard: bool = True, tensorboard_scope: str = None):
-
-    if output_size is None:
-        output_size = [None] * num_layers
-    else:
-        output_size = [int(o/2) for o in output_size]   # BRNN stacks features
-
-    if activation_fw_list is None:
-        activation_fw_list = [None] * num_layers
-    if activation_bw_list is None:
-        activation_bw_list = [None] * num_layers
-
-    # Forward direction cell:
-    lstm_fw_cell = [tf.nn.rnn_cell.LSTMCell(num_units=num_fw_cell_units[_],
-                                            state_is_tuple=True,
-                                            name=name+'_fw_{}'.format(_),
-                                            activation=activation_fw_list[_],
-                                            num_proj=output_size[_]
-                                            ) for _ in range(num_layers)]
-    # Backward direction cell:
-    lstm_bw_cell = [tf.nn.rnn_cell.LSTMCell(num_units=num_bw_cell_units[_],
-                                            state_is_tuple=True,
-                                            name=name+'_bw_{}'.format(_),
-                                            activation=activation_bw_list[_],
-                                            num_proj=output_size[_]
-                                            ) for _ in range(num_layers)]
-
-    input_ph, output_state_fw, output_state_bw = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(
-        cells_fw=lstm_fw_cell,
-        cells_bw=lstm_bw_cell,
-        inputs=input_ph,
-        dtype=tf.float32,
-        time_major=False,
-        sequence_length=seq_len_ph,
-        scope=name)
-
-    if use_tensorboard:
-        tf.summary.histogram(tensorboard_scope, input_ph)
-
-    return input_ph
-
-
 def lstm_cell(size, activation, keep_prob=None, train_ph=False):
     cell = tf.nn.rnn_cell.LSTMCell(size, activation=activation)
 
@@ -100,3 +28,67 @@ def bidirectional_lstm(input_ph, seq_len_ph, num_units, activation=None, keep_pr
         scope=scope)
 
     return (out_fw, out_bw), (state_fw, state_bw)
+
+
+def unidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_cell_units: List[int], train_ph: bool,
+                       activation_list=None, keep_prob_list: List[float] = None,
+                       use_tensorboard: bool = True, tensorboard_scope: str = None):
+
+    if activation_list is None:
+        activation_list = [None] * num_layers
+    if keep_prob_list is None:
+        keep_prob_list = [None] * num_layers
+
+    cell = []
+    for _ in range(num_layers):
+        cell.append(
+            lstm_cell(num_cell_units[_], activation_list[_], keep_prob=keep_prob_list[_], train_ph=train_ph)
+        )
+
+    multi_rrn_cell = tf.nn.rnn_cell.MultiRNNCell(cell, state_is_tuple=True)
+
+    input_ph, _ = tf.nn.dynamic_rnn(cell=multi_rrn_cell,
+                                    inputs=input_ph,
+                                    sequence_length=seq_len_ph,
+                                    dtype=tf.float32)
+    if use_tensorboard:
+        tf.summary.histogram(tensorboard_scope, input_ph)
+
+    return input_ph
+
+
+def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_cell_units: List[int], train_ph: bool,
+                      activation_list=None, keep_prob_list: List[float] = None, use_tensorboard: bool = True,
+                      tensorboard_scope: str = None):
+
+    if activation_list is None:
+        activation_list = [None] * num_layers
+    if keep_prob_list is None:
+        keep_prob_list = [None] * num_layers
+
+    # Forward direction cell:
+    lstm_fw_cell = []
+    for _ in range(num_layers):
+        lstm_fw_cell.append(
+            lstm_cell(num_cell_units[_], activation_list[_], keep_prob=keep_prob_list[_], train_ph=train_ph)
+        )
+
+    # Backward direction cell:
+    lstm_bw_cell = []
+    for _ in range(num_layers):
+        lstm_bw_cell.append(
+            lstm_cell(num_cell_units[_], activation_list[_], keep_prob=keep_prob_list[_], train_ph=train_ph)
+        )
+
+    input_ph, output_state_fw, output_state_bw = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(
+        cells_fw=lstm_fw_cell,
+        cells_bw=lstm_bw_cell,
+        inputs=input_ph,
+        dtype=tf.float32,
+        time_major=False,
+        sequence_length=seq_len_ph)
+
+    if use_tensorboard:
+        tf.summary.histogram(tensorboard_scope, input_ph)
+
+    return input_ph
