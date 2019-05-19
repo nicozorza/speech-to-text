@@ -32,6 +32,7 @@ def model_fn(features,
                                           name='dense_layer_1',
                                           activation_list=params['dense_activations_1'],
                                           use_batch_normalization=params['batch_normalization_1'],
+                                          batch_normalization_trainable=params['batch_normalization_trainable_1'],
                                           train_ph=mode == tf.estimator.ModeKeys.TRAIN,
                                           use_tensorboard=True,
                                           keep_prob_list=params['keep_prob_1'],
@@ -59,6 +60,7 @@ def model_fn(features,
                                            name='dense_layer_2',
                                            activation_list=params['dense_activations_2'],
                                            use_batch_normalization=params['batch_normalization_2'],
+                                           batch_normalization_trainable=params['batch_normalization_trainable_2'],
                                            train_ph=mode == tf.estimator.ModeKeys.TRAIN,
                                            use_tensorboard=True,
                                            keep_prob_list=params['keep_prob_2'],
@@ -237,13 +239,15 @@ def model_fn(features,
         else:
             optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 
-        if params['clip_gradient'] != 0:
-            grads = tf.gradients(loss, tf.trainable_variables())
-            grads, _ = tf.clip_by_global_norm(grads, params['clip_gradient'])  # gradient clipping
-            grads_and_vars = list(zip(grads, tf.trainable_variables()))
-            train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
-        else:
-            train_op = optimizer.minimize(loss, global_step=global_step)
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        with tf.control_dependencies(update_ops):
+            if params['clip_gradient'] != 0:
+                grads = tf.gradients(loss, tf.trainable_variables())
+                grads, _ = tf.clip_by_global_norm(grads, params['clip_gradient'])  # gradient clipping
+                grads_and_vars = list(zip(grads, tf.trainable_variables()))
+                train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
+            else:
+                train_op = optimizer.minimize(loss, global_step=global_step)
 
     logging_hook = tf.train.LoggingTensorHook(
         tensors={

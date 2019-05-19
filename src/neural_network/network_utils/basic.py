@@ -4,8 +4,8 @@ import tensorflow as tf
 
 
 def dense_layer(input_ph, num_units: int, name: str, activation=None,
-                use_batch_normalization: bool = True, train_ph: bool = True,
-                use_tensorboard: bool = True, keep_prob: float = 0,
+                use_batch_normalization: bool = True, batch_normalization_trainable: bool = False,
+                train_ph: bool = True, use_tensorboard: bool = True, keep_prob: float = 0,
                 tensorboard_scope: str = None,
                 kernel_initializer=None,
                 bias_initializer=None):
@@ -16,18 +16,25 @@ def dense_layer(input_ph, num_units: int, name: str, activation=None,
     out_ph = tf.layers.dense(
         inputs=input_ph,
         units=num_units,
-        activation=activation,
+        activation=None,
         name=name,
         kernel_initializer=kernel_initializer,
         bias_initializer=bias_initializer
     )
     if use_batch_normalization:
-        out_ph = tf.layers.batch_normalization(out_ph, name=name+"_batch_norm")
+        out_ph = tf.layers.batch_normalization(out_ph,
+                                               name=name+"_batch_norm",
+                                               training=train_ph,
+                                               trainable=batch_normalization_trainable)
+    if activation is not None:
+        out_ph = activation(out_ph)
+
     if keep_prob != 1:
         out_ph = tf.layers.dropout(out_ph,
                                    1 - keep_prob,
                                    training=train_ph,
                                    name=name+'_dropout')
+
     if use_tensorboard:
         if tensorboard_scope is None:
             tb_name = name
@@ -39,8 +46,8 @@ def dense_layer(input_ph, num_units: int, name: str, activation=None,
 
 
 def dense_multilayer(input_ph, num_layers: int, num_units: List[int], name: str, activation_list,
-                     use_batch_normalization: bool = True, train_ph: bool = True,
-                     use_tensorboard: bool = True, keep_prob_list: List[float] = 0,
+                     use_batch_normalization: bool = True, batch_normalization_trainable: bool = False,
+                     train_ph: bool = True, use_tensorboard: bool = True, keep_prob_list: List[float] = 0,
                      tensorboard_scope: str = None,
                      kernel_initializers=None,
                      bias_initializers=None):
@@ -68,5 +75,6 @@ def dense_multilayer(input_ph, num_layers: int, num_units: List[int], name: str,
                                keep_prob=keep_prob_list[_],
                                tensorboard_scope=tensorboard_scope,
                                kernel_initializer=kernel_initializers[_],
-                               bias_initializer=bias_initializers[_])
+                               bias_initializer=bias_initializers[_],
+                               batch_normalization_trainable=batch_normalization_trainable)
     return input_ph
