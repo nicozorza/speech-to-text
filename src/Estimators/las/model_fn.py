@@ -211,8 +211,8 @@ def model_fn(features,
         logging_hook = tf.train.LoggingTensorHook(
             tensors={
                 'LER': tf.reduce_mean(ler),
-                'max_predictions': sample_ids[tf.argmax(ler)],
-                'max_targets': targets[tf.argmax(ler)],
+                # 'max_predictions': sample_ids[tf.argmax(ler)],
+                # 'max_targets': targets[tf.argmax(ler)],
             },
             every_n_iter=10)
 
