@@ -28,6 +28,7 @@ def model_fn(features, labels, mode, params):
                                      name='dense_layer_1',
                                      activation_list=params['dense_activations_1'],
                                      use_batch_normalization=params['batch_normalization_1'],
+                                     batch_normalization_trainable=params['batch_normalization_trainable_1'],
                                      train_ph=mode == tf.estimator.ModeKeys.TRAIN,
                                      use_tensorboard=True,
                                      keep_prob_list=params['keep_prob_1'],
@@ -68,6 +69,7 @@ def model_fn(features, labels, mode, params):
                                        name='dense_layer_2',
                                        activation_list=params['dense_activations_2'],
                                        use_batch_normalization=params['batch_normalization_2'],
+                                       batch_normalization_trainable=params['batch_normalization_trainable_2'],
                                        train_ph=mode == tf.estimator.ModeKeys.TRAIN,
                                        use_tensorboard=True,
                                        keep_prob_list=params['keep_prob_2'],
@@ -81,7 +83,7 @@ def model_fn(features, labels, mode, params):
                                                  name='dense_output_no_activation',
                                                  activation=None,
                                                  use_batch_normalization=False,
-                                                 train_ph=mode == tf.estimator.ModeKeys.TRAIN,
+                                                 train_ph=False,
                                                  use_tensorboard=True,
                                                  keep_prob=1,
                                                  tensorboard_scope='dense_output')
@@ -108,7 +110,7 @@ def model_fn(features, labels, mode, params):
                                                            word_chars.encode('utf8'))
 
         decoded_mask = tf.not_equal(decoded, params[
-            'num_classes'] - 1)  # ClassicLabel tiene 29 clases, por eso resto 1. Esta muy a ojo
+            'num_classes'])  # ClassicLabel tiene 29 clases, por eso resto 1. Esta muy a ojo
         decoded_mask.set_shape([None, None])
         decoded_mask = tf.boolean_mask(decoded, decoded_mask)
 
