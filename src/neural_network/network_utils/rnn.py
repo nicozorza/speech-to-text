@@ -2,6 +2,19 @@ from typing import List
 import tensorflow as tf
 
 
+def bn_lstm_cell(size, activation, keep_prob=None, train_ph=False, use_batch_normalization=True):
+    keep_prob = 1.0 if keep_prob is None else keep_prob
+    keep_prob = keep_prob if train_ph else 1.0
+
+    cell = tf.contrib.rnn.LayerNormBasicLSTMCell(
+        num_units=size,
+        activation=activation,
+        dropout_keep_prob=keep_prob,
+        layer_norm=use_batch_normalization
+    )
+    return cell
+
+
 def lstm_cell(size, activation, keep_prob=None, train_ph=False):
     cell = tf.nn.rnn_cell.LSTMCell(size, activation=activation)
 
