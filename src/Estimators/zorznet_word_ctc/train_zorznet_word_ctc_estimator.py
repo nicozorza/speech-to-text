@@ -66,6 +66,8 @@ network_data.clip_gradient = 5
 network_data.optimizer = 'adam'      # 'rms', 'adam', 'momentum', 'sgd'
 network_data.momentum = None
 
+network_data.noise_stddev = 0.1
+
 # -------------------------------------------------------------------------------------------------------------------- #
 
 train_flag = False

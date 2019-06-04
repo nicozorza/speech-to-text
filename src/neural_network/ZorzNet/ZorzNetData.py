@@ -46,5 +46,7 @@ class ZorzNetData(NetworkDataInterface):
         self.clip_gradient: int = None
         self.momentum: float = None
 
+        self.noise_stddev: float = None
+
     def as_dict(self):
         return self.__dict__

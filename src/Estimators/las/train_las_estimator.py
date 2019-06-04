@@ -30,58 +30,60 @@ network_data.num_units_1 = [400] * network_data.num_dense_layers_1
 network_data.dense_activations_1 = [tf.nn.relu] * network_data.num_dense_layers_1
 network_data.batch_normalization_1 = True
 network_data.batch_normalization_trainable_1 = True
-network_data.keep_prob_1 = [0.9] * network_data.num_dense_layers_1
+network_data.keep_prob_1 = [0.7] * network_data.num_dense_layers_1
 network_data.kernel_init_1 = [tf.truncated_normal_initializer(mean=0, stddev=0.1)] * network_data.num_dense_layers_1
 network_data.bias_init_1 = [tf.zeros_initializer()] * network_data.num_dense_layers_1
 
 network_data.listener_num_layers = 1
-network_data.listener_num_units = [256] * network_data.listener_num_layers
+network_data.listener_num_units = [512] * network_data.listener_num_layers
 network_data.listener_activation_list = [tf.nn.tanh] * network_data.listener_num_layers
 network_data.listener_keep_prob_list = [0.8] * network_data.listener_num_layers
 
-network_data.num_dense_layers_2 = 0
-network_data.num_units_2 = [256]
+network_data.num_dense_layers_2 = 1
+network_data.num_units_2 = [400]
 network_data.dense_activations_2 = [tf.nn.tanh] * network_data.num_dense_layers_2
 network_data.batch_normalization_2 = True
-network_data.batch_normalization_trainable_2 = False    # No funciona trainable=True luego de una RNN
-network_data.keep_prob_2 = [0.9] * network_data.num_dense_layers_2
+network_data.batch_normalization_trainable_2 = False   # No funciona trainable=True luego de una RNN
+network_data.keep_prob_2 = [0.8] * network_data.num_dense_layers_2
 network_data.kernel_init_2 = [tf.truncated_normal_initializer(mean=0, stddev=0.1)] * network_data.num_dense_layers_2
 network_data.bias_init_2 = [tf.zeros_initializer()] * network_data.num_dense_layers_2
 
 network_data.attention_type = 'luong'       # 'luong', 'bahdanau'
 network_data.attention_num_layers = 1
 network_data.attention_size = None
-network_data.attention_units = 256
+network_data.attention_units = 512
 network_data.attention_activation = tf.nn.tanh
-network_data.attention_keep_prob = 0.9
+network_data.attention_keep_prob = 0.8
 
 network_data.kernel_regularizer = 0.0
 network_data.sampling_probability = 0.2
 
 network_data.learning_rate = 0.001
-network_data.use_learning_rate_decay = False
-network_data.learning_rate_decay_steps = 1000
-network_data.learning_rate_decay = 0.99
+network_data.use_learning_rate_decay = True
+network_data.learning_rate_decay_steps = 8000
+network_data.learning_rate_decay = 0.98
 
-network_data.clip_gradient = 5
+network_data.clip_gradient = 0
 network_data.optimizer = 'adam'      # 'rms', 'adam', 'momentum', 'sgd'
 network_data.momentum = None
+
+network_data.noise_stddev = 0.1
 
 pprint.pprint(network_data.as_dict())
 # -------------------------------------------------------------------------------------------------------------------- #
 
-train_flag = False
+train_flag = True
 validate_flag = False
-test_flag = True
+test_flag = False
 save_predictions = False
 
-restore_run = True
+restore_run = False
 model_dir = 'out/las_net/estimator/'
 
 train_files = ['data/train_database.tfrecords']
 validate_files = ['data/train_database.tfrecords']
 test_files = ['data/test_database.tfrecords']
-save_predictions_files = ['data/test_database.tfrecords']
+save_predictions_files = ['data/test_database_1.tfrecords', 'data/test_database_2.tfrecords']
 
 train_batch_size = 1
 train_epochs = 1

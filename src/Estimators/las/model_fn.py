@@ -14,6 +14,9 @@ def model_fn(features,
     input_features = features['feature']
     input_features_length = features['feat_len']
 
+    if params['noise_stddev'] is not None and params['noise_stddev'] != 0.0:
+        input_features = tf.keras.layers.GaussianNoise(stddev=params['noise_stddev'])(inputs=input_features, training=mode == tf.estimator.ModeKeys.TRAIN)
+
     decoder_inputs = None
     targets = None
     targets_length = None
