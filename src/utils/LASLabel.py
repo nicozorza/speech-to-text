@@ -8,15 +8,15 @@ from src.utils.Label import Label
 class LASLabel(Label):
     # Constants
     SPACE_TOKEN = '<space>'
-    SPACE_INDEX = 3
+    SPACE_INDEX = 0
     SOS_TOKEN = '<sos>'
-    SOS_INDEX = 1
+    SOS_INDEX = ord('z') - ord('a') + 2
     EOS_TOKEN = '<eos>'
-    EOS_INDEX = 2
+    EOS_INDEX = SOS_INDEX + 1
     UNK_TOKEN = '<unk>'
-    UNK_INDEX = 0
+    UNK_INDEX = SOS_INDEX + 2
 
-    FIRST_INDEX = ord('a') - 1 - SPACE_INDEX  # 0 is reserved to space
+    FIRST_INDEX = ord('a') - 1  # 0 is reserved to space
 
     # a-z (26), space (1) , eos (1), sos (1), pad (1) -> 30
     num_classes = ord('z') - ord('a') + 5

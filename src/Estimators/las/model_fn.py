@@ -171,9 +171,9 @@ def model_fn(features,
         ler = edit_distance(
             sample_ids, targets, params['eos_id'], None) #params.mapping)
 
-        metrics = {'LER': tf.metrics.mean(ler),}
+        metrics = {'ler': tf.metrics.mean(ler),}
 
-    tf.summary.scalar('LER', metrics['LER'][1])
+    tf.summary.scalar('ler', metrics['ler'][1])
 
     with tf.name_scope('loss'):
         kernel_loss = 0
@@ -213,7 +213,7 @@ def model_fn(features,
 
         logging_hook = tf.train.LoggingTensorHook(
             tensors={
-                'LER': tf.reduce_mean(ler),
+                'ler': tf.reduce_mean(ler),
                 # 'max_predictions': sample_ids[tf.argmax(ler)],
                 # 'max_targets': targets[tf.argmax(ler)],
             },
@@ -255,10 +255,10 @@ def model_fn(features,
     logging_hook = tf.train.LoggingTensorHook(
         tensors={
             'loss': loss,
-            'LER': tf.reduce_mean(ler),
+            'ler': tf.reduce_mean(ler),
             'learning_rate': tf.reduce_mean(learning_rate)
         },
-        every_n_secs=10)
+        every_n_secs=1)
 
     return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op,
                                       training_hooks=[logging_hook], eval_metric_ops=metrics)
