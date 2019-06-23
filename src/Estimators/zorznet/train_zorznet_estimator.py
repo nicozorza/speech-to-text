@@ -29,12 +29,13 @@ network_data.kernel_init_1 = [tf.truncated_normal_initializer(mean=0, stddev=0.1
 network_data.bias_init_1 = [tf.zeros_initializer()] * network_data.num_dense_layers_1
 
 network_data.is_bidirectional = True
-network_data.num_cell_units = [512] * 2
-network_data.cell_activation = [tf.nn.tanh] * 2
+network_data.num_cell_units = [512]
+network_data.cell_activation = [tf.nn.tanh]
 network_data.keep_prob_rnn = None#[0.8] * 2
+network_data.rnn_batch_normalization = True
 
 network_data.num_dense_layers_2 = 1
-network_data.num_units_2 = [150, 100]
+network_data.num_units_2 = [150]
 network_data.dense_activations_2 = [tf.nn.relu] * network_data.num_dense_layers_2
 network_data.batch_normalization_2 = True
 network_data.batch_normalization_trainable_2 = False    # No funciona trainable=True luego de una RNN
@@ -42,7 +43,7 @@ network_data.keep_prob_2 = None#[0.6, 0.6]
 network_data.kernel_init_2 = [tf.truncated_normal_initializer(mean=0, stddev=0.1)] * network_data.num_dense_layers_2
 network_data.bias_init_2 = [tf.zeros_initializer()] * network_data.num_dense_layers_2
 
-network_data.dense_regularizer = 0.5
+network_data.dense_regularizer = 0.0
 network_data.rnn_regularizer = 0.0
 
 network_data.beam_width = 0    # 0 -> greedy_decoder, >0 -> beam_search
@@ -65,7 +66,7 @@ validate_flag = False
 test_flag = False
 save_predictions = False
 
-restore_run = False
+restore_run = True
 model_dir = 'out/zorznet/estimator/'
 
 train_files = ['data/train_database.tfrecords']
@@ -73,7 +74,7 @@ validate_files = ['data/test_database_1.tfrecords', 'data/test_database_2.tfreco
 test_files = ['data/test_database.tfrecords']#, 'data/test_database_2.tfrecords']
 save_predictions_files = ['data/test_database.tfrecords']
 
-train_batch_size = 1
+train_batch_size = 3
 train_epochs = 1
 
 validate_batch_size = 1

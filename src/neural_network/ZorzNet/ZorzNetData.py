@@ -22,6 +22,7 @@ class ZorzNetData(NetworkDataInterface):
         self.num_cell_units: List[int] = None
         self.cell_activation: List[int] = None
         self.keep_prob_rnn: List[float] = None
+        self.rnn_batch_normalization: bool = None
 
         self.rnn_output_sizes: List[int] = None
 

@@ -50,7 +50,8 @@ def model_fn(features, labels, mode, config, params):
                 use_tensorboard=True,
                 tensorboard_scope='RNN',
                 train_ph=mode == tf.estimator.ModeKeys.TRAIN,
-                keep_prob_list=params['keep_prob_rnn']
+                keep_prob_list=params['keep_prob_rnn'],
+                use_batch_normalization=params["rnn_batch_normalization"] == True
             )
 
         else:
@@ -63,7 +64,9 @@ def model_fn(features, labels, mode, config, params):
                 use_tensorboard=True,
                 tensorboard_scope='RNN',
                 train_ph=mode == tf.estimator.ModeKeys.TRAIN,
-                keep_prob_list=params['keep_prob_rnn'])
+                keep_prob_list=params['keep_prob_rnn'],
+                use_batch_normalization=params["rnn_batch_normalization"] == True
+            )
 
     with tf.name_scope("dense_layer_2"):
         rnn_outputs = dense_multilayer(input_ph=rnn_outputs,

@@ -2,7 +2,7 @@ from typing import List
 import tensorflow as tf
 
 
-def bn_lstm_cell(size, activation, keep_prob=None, train_ph=False, use_batch_normalization=True):
+def bn_lstm_cell(size, activation, keep_prob=None, train_ph=False):
     keep_prob = 1.0 if keep_prob is None else keep_prob
     keep_prob = keep_prob if train_ph else 1.0
 
@@ -10,7 +10,7 @@ def bn_lstm_cell(size, activation, keep_prob=None, train_ph=False, use_batch_nor
         num_units=size,
         activation=activation,
         dropout_keep_prob=keep_prob,
-        layer_norm=use_batch_normalization
+        layer_norm=True
     )
     return cell
 
@@ -44,8 +44,8 @@ def bidirectional_lstm(input_ph, seq_len_ph, num_units, activation=None, keep_pr
 
 
 def unidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_cell_units: List[int], train_ph: bool,
-                       activation_list=None, keep_prob_list: List[float] = None,
-                       use_tensorboard: bool = True, tensorboard_scope: str = None):
+                       activation_list=None, keep_prob_list: List[float] = None, use_tensorboard: bool = True,
+                       tensorboard_scope: str = None, use_batch_normalization: bool = False):
 
     if activation_list is None:
         activation_list = [None] * num_layers
@@ -53,9 +53,10 @@ def unidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_cell_units: Li
         keep_prob_list = [None] * num_layers
 
     cell = []
+    cell_type = bn_lstm_cell if use_batch_normalization else lstm_cell
     for _ in range(num_layers):
         cell.append(
-            lstm_cell(num_cell_units[_], activation_list[_], keep_prob=keep_prob_list[_], train_ph=train_ph)
+            cell_type(num_cell_units[_], activation_list[_], keep_prob=keep_prob_list[_], train_ph=train_ph)
         )
 
     multi_rrn_cell = tf.nn.rnn_cell.MultiRNNCell(cell, state_is_tuple=True)
@@ -72,7 +73,7 @@ def unidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_cell_units: Li
 
 def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_cell_units: List[int], train_ph: bool,
                       activation_list=None, keep_prob_list: List[float] = None, use_tensorboard: bool = True,
-                      tensorboard_scope: str = None):
+                      tensorboard_scope: str = None, use_batch_normalization: bool = False):
 
     if activation_list is None:
         activation_list = [None] * num_layers
@@ -81,16 +82,18 @@ def bidirectional_rnn(input_ph, seq_len_ph, num_layers: int, num_cell_units: Lis
 
     # Forward direction cell:
     lstm_fw_cell = []
+
+    cell_type = bn_lstm_cell if use_batch_normalization else lstm_cell
     for _ in range(num_layers):
         lstm_fw_cell.append(
-            lstm_cell(num_cell_units[_], activation_list[_], keep_prob=keep_prob_list[_], train_ph=train_ph)
+            cell_type(num_cell_units[_], activation_list[_], keep_prob=keep_prob_list[_], train_ph=train_ph)
         )
 
     # Backward direction cell:
     lstm_bw_cell = []
     for _ in range(num_layers):
         lstm_bw_cell.append(
-            lstm_cell(num_cell_units[_], activation_list[_], keep_prob=keep_prob_list[_], train_ph=train_ph)
+            cell_type(num_cell_units[_], activation_list[_], keep_prob=keep_prob_list[_], train_ph=train_ph)
         )
 
     input_ph, output_state_fw, output_state_bw = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(
