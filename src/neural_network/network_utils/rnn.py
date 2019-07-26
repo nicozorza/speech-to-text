@@ -20,7 +20,7 @@ def lstm_cell(size, activation, keep_prob=None, train_ph=False):
 
     if keep_prob is not None and train_ph:
         cell = tf.nn.rnn_cell.DropoutWrapper(cell, input_keep_prob=keep_prob, output_keep_prob=keep_prob,
-                                             state_keep_prob=keep_prob, variational_recurrent=True)
+                                             state_keep_prob=keep_prob)     # , variational_recurrent=True)
     return cell
 
 
