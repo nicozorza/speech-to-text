@@ -54,6 +54,23 @@ def reshape_pyramidal(outputs, sequence_length):
     return concat_outputs, tf.floordiv(sequence_length, 2) + tf.floormod(sequence_length, 2)
 
 
+def self_attention(input_ph, hidden_dim, output_dim, scaled=True):
+    Q = tf.layers.dense(input_ph, hidden_dim)  # [batch_size, sequence_length, hidden_dim]
+    K = tf.layers.dense(input_ph, hidden_dim)  # [batch_size, sequence_length, hidden_dim]
+    V = tf.layers.dense(input_ph, output_dim)  # [batch_size, sequence_length, n_classes]
+
+    attention = tf.matmul(Q, K, transpose_b=True)  # [batch_size, sequence_length, sequence_length]
+
+    if scaled:
+        d_k = tf.cast(tf.shape(K)[-1], dtype=tf.float32)
+        attention = tf.divide(attention, tf.sqrt(d_k))  # [batch_size, sequence_length, sequence_length]
+
+    attention = tf.nn.softmax(attention, axis=-1)  # [batch_size, sequence_length, sequence_length]
+
+    output = tf.matmul(attention, V)  # [batch_size, sequence_length, output_dime]
+    return output
+
+
 def attention_cell(input, lengths, num_layers: int, attention_units: int, attention_size: int, attention_type: str,
                    activation, keep_prob, train_ph, use_tensorboard=True, tensorboard_scope='attention_cell'):
 
