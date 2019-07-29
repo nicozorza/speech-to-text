@@ -97,10 +97,17 @@ def model_fn(features, labels, mode, config, params):
                     'kernel' in var.name:
                 dense_loss += tf.nn.l2_loss(var)
 
+        attention_loss = 0
+        for var in tf.trainable_variables():
+            if var.name.startswith('self_attention') and 'kernel' in var.name:
+                attention_loss += tf.nn.l2_loss(var)
+
         loss = tf.nn.ctc_loss(input_labels, dense_output_no_activation, input_features_length,
                               time_major=False)
         logits_loss = tf.reduce_mean(tf.reduce_sum(loss))
-        loss = logits_loss + params['dense_regularizer'] * dense_loss
+        loss = logits_loss \
+               + params['dense_regularizer'] * dense_loss \
+               + params["self_attention_regularizer"] * attention_loss
         tf.summary.scalar('loss', loss)
 
     with tf.name_scope("label_error_rate"):

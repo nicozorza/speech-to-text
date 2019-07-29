@@ -55,9 +55,9 @@ def reshape_pyramidal(outputs, sequence_length):
 
 
 def self_attention(input_ph, hidden_dim, output_dim, scaled=True):
-    Q = tf.layers.dense(input_ph, hidden_dim)  # [batch_size, sequence_length, hidden_dim]
-    K = tf.layers.dense(input_ph, hidden_dim)  # [batch_size, sequence_length, hidden_dim]
-    V = tf.layers.dense(input_ph, output_dim)  # [batch_size, sequence_length, n_classes]
+    Q = tf.layers.dense(input_ph, hidden_dim, name="self_attention_q")  # [batch_size, sequence_length, hidden_dim]
+    K = tf.layers.dense(input_ph, hidden_dim, name="self_attention_k")  # [batch_size, sequence_length, hidden_dim]
+    V = tf.layers.dense(input_ph, output_dim, name="self_attention_v")  # [batch_size, sequence_length, n_classes]
 
     attention = tf.matmul(Q, K, transpose_b=True)  # [batch_size, sequence_length, sequence_length]
 

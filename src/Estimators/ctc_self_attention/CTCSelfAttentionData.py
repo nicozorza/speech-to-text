@@ -2,7 +2,7 @@ from typing import List
 from src.neural_network.NetworkInterface import NetworkDataInterface
 
 
-class SelfAttentionData(NetworkDataInterface):
+class CTCSelfAttentionData(NetworkDataInterface):
     def __init__(self):
 
         self.num_features: int = None
@@ -30,6 +30,7 @@ class SelfAttentionData(NetworkDataInterface):
         self.bias_init_2 = None
 
         self.dense_regularizer: float = None
+        self.self_attention_regularizer: float = None
 
         self.beam_width: int = None
 
