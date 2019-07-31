@@ -1,6 +1,6 @@
 import os
 import tensorflow as tf
-from src.neural_network.network_utils import dense_multilayer, dense_layer, self_attention
+from src.neural_network.network_utils import dense_multilayer, dense_layer, self_attention, multihead_attention
 
 
 def model_fn(features, labels, mode, config, params):
@@ -39,15 +39,20 @@ def model_fn(features, labels, mode, config, params):
                                      bias_initializers=params['bias_init_1'],
                                      tensorboard_scope='dense_layer_1')
 
-    with tf.name_scope("ctc_self_attention"):
-        self_attention_output = self_attention(
+    with tf.name_scope("attention"):
+        attention_output = multihead_attention(
             input_ph=rnn_input,
-            hidden_dim=params['self_attention_hidden_size'],
-            output_dim=params['self_attention_output_size']
-        )
+            num_heads=params['attention_num_heads'],
+            hidden_dim=params['attention_hidden_size'],
+            hidden_output=params['attention_hidden_output_size'],
+            output_dim=params['attention_output_size'])
+        if params["attention_user_layer_normalization"]:
+            attention_output = tf.contrib.layers.layer_norm(
+                attention_output,
+                trainable=params["attention_layer_normalization_trainable"])
 
     with tf.name_scope("dense_layer_2"):
-        rnn_outputs = dense_multilayer(input_ph=self_attention_output,
+        rnn_outputs = dense_multilayer(input_ph=attention_output,
                                        num_layers=params['num_dense_layers_2'],
                                        num_units=params['num_units_2'],
                                        name='dense_layer_2',

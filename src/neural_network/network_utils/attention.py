@@ -54,10 +54,10 @@ def reshape_pyramidal(outputs, sequence_length):
     return concat_outputs, tf.floordiv(sequence_length, 2) + tf.floormod(sequence_length, 2)
 
 
-def self_attention(input_ph, hidden_dim, output_dim, scaled=True):
-    Q = tf.layers.dense(input_ph, hidden_dim, name="self_attention_q")  # [batch_size, sequence_length, hidden_dim]
-    K = tf.layers.dense(input_ph, hidden_dim, name="self_attention_k")  # [batch_size, sequence_length, hidden_dim]
-    V = tf.layers.dense(input_ph, output_dim, name="self_attention_v")  # [batch_size, sequence_length, n_classes]
+def scaled_dot_product(input_ph, hidden_dim, output_dim, scaled=True, name=None):
+    Q = tf.layers.dense(input_ph, hidden_dim, name=name + "_q" if name is not None else None)  # [batch_size, sequence_length, hidden_dim]
+    K = tf.layers.dense(input_ph, hidden_dim, name=name + "_k" if name is not None else None)  # [batch_size, sequence_length, hidden_dim]
+    V = tf.layers.dense(input_ph, output_dim, name=name + "_v" if name is not None else None)  # [batch_size, sequence_length, n_classes]
 
     attention = tf.matmul(Q, K, transpose_b=True)  # [batch_size, sequence_length, sequence_length]
 
@@ -67,7 +67,29 @@ def self_attention(input_ph, hidden_dim, output_dim, scaled=True):
 
     attention = tf.nn.softmax(attention, axis=-1)  # [batch_size, sequence_length, sequence_length]
 
-    output = tf.matmul(attention, V)  # [batch_size, sequence_length, output_dime]
+    output = tf.matmul(attention, V)  # [batch_size, sequence_length, output_dim]
+    return output
+
+
+def self_attention(input_ph, hidden_dim, output_dim, scaled=True):
+    return scaled_dot_product(input_ph, hidden_dim, output_dim, scaled)
+
+
+def multihead_attention(input_ph, num_heads, hidden_dim, hidden_output, output_dim, scaled=True):
+    head_list = []
+
+    for i in range(num_heads):
+        head_list.append(scaled_dot_product(    # [batch_size, sequence_length, output_dim]
+            input_ph=input_ph,
+            hidden_dim=hidden_dim,
+            output_dim=hidden_output,
+            scaled=scaled,
+            name=f"head_{i}")
+        )
+    attention = tf.concat(head_list, axis=2)    # [batch_size, sequence_length, output_dim * num_heads]
+
+    output = tf.layers.dense(attention, output_dim)  # [batch_size, sequence_length, output_dim]
+
     return output
 
 

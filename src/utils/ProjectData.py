@@ -29,9 +29,9 @@ class ProjectData:
         self.ZORZNET_MODEL_PATH = self.OUT_DIR + 'zorznet/' + 'model/model'
         self.ZORZNET_TENSORBOARD_PATH = self.OUT_DIR + 'zorznet/' + 'tensorboard/'
 
-        self.CTC_SELF_ATTENTION_CHECKPOINT_PATH = self.OUT_DIR + 'ctc_self_attention/' + 'checkpoint/model.ckpt'
-        self.CTC_SELF_ATTENTION_MODEL_PATH = self.OUT_DIR + 'ctc_self_attention/' + 'model/model'
-        self.CTC_SELF_ATTENTION_TENSORBOARD_PATH = self.OUT_DIR + 'ctc_self_attention/' + 'tensorboard/'
+        self.CTC_ATTENTION_CHECKPOINT_PATH = self.OUT_DIR + 'ctc_attention/' + 'checkpoint/model.ckpt'
+        self.CTC_ATTENTION_MODEL_PATH = self.OUT_DIR + 'ctc_attention/' + 'model/model'
+        self.CTC_ATTENTION_TENSORBOARD_PATH = self.OUT_DIR + 'ctc_attention/' + 'tensorboard/'
 
         self.ZORZNET_ITERATED_CHECKPOINT_PATH = self.OUT_DIR + 'zorznet_iter/' + 'checkpoint/model.ckpt'
         self.ZORZNET_ITERATED_MODEL_PATH = self.OUT_DIR + 'zorznet_iter/' + 'model/model'
