@@ -1,6 +1,6 @@
 import os
 import tensorflow as tf
-from src.neural_network.network_utils import dense_multilayer, dense_layer, self_attention, multihead_attention
+from src.neural_network.network_utils import dense_multilayer, dense_layer, multihead_attention
 
 
 def model_fn(features, labels, mode, config, params):
@@ -104,7 +104,7 @@ def model_fn(features, labels, mode, config, params):
 
         attention_loss = 0
         for var in tf.trainable_variables():
-            if var.name.startswith('self_attention') and 'kernel' in var.name:
+            if var.name.startswith('head_') and 'kernel' in var.name:
                 attention_loss += tf.nn.l2_loss(var)
 
         loss = tf.nn.ctc_loss(input_labels, dense_output_no_activation, input_features_length,
@@ -168,7 +168,6 @@ def model_fn(features, labels, mode, config, params):
                 'learning_rate': tf.reduce_mean(learning_rate),
                 # 'max_predictions': dense_decoded,
                 # 'max_targets': tf.sparse.to_dense(sp_input=input_labels, validate_indices=True),
-                # 'asd': tf.cast(dense_decoded, dtype=tf.int32) - tf.cast(tf.sparse.to_dense(sp_input=input_labels, validate_indices=True), dtype=tf.int32)
             },
             every_n_secs=1)
 

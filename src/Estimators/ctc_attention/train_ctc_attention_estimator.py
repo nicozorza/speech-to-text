@@ -23,7 +23,7 @@ network_data.noise_stddev = 0.0
 network_data.num_dense_layers_1 = 1
 network_data.num_units_1 = [400] * network_data.num_dense_layers_1
 network_data.dense_activations_1 = [tf.nn.relu] * network_data.num_dense_layers_1
-network_data.batch_normalization_1 = True
+network_data.batch_normalization_1 = False
 network_data.batch_normalization_trainable_1 = False
 network_data.keep_prob_1 = None#[0.6] * network_data.num_dense_layers_1
 network_data.kernel_init_1 = [tf.truncated_normal_initializer(mean=0, stddev=0.1)] * network_data.num_dense_layers_1
@@ -33,13 +33,13 @@ network_data.attention_num_heads = 3
 network_data.attention_hidden_size = 256
 network_data.attention_hidden_output_size = 150
 network_data.attention_output_size = 150
-network_data.attention_user_layer_normalization = True
+network_data.attention_user_layer_normalization = False
 network_data.attention_layer_normalization_trainable = False
 
 network_data.num_dense_layers_2 = 0
 network_data.num_units_2 = [150]
 network_data.dense_activations_2 = [tf.nn.relu] * network_data.num_dense_layers_2
-network_data.batch_normalization_2 = True
+network_data.batch_normalization_2 = False
 network_data.batch_normalization_trainable_2 = False
 network_data.keep_prob_2 = None#[0.6, 0.6]
 network_data.kernel_init_2 = [tf.truncated_normal_initializer(mean=0, stddev=0.1)] * network_data.num_dense_layers_2
@@ -70,12 +70,12 @@ restore_run = True
 model_dir = 'out/ctc_attention/estimator/'
 
 train_files = ['data/train_database.tfrecords']
-validate_files = ['data/train_database.tfrecords']
-test_files = ['data/train_database.tfrecords']#, 'data/test_database_2.tfrecords']
+validate_files = ['data/test_database.tfrecords']
+test_files = ['data/test_database.tfrecords']#, 'data/test_database_2.tfrecords']
 save_predictions_files = ['data/train_database.tfrecords']
 
-train_batch_size = 10
-train_epochs = 10
+train_batch_size = 1
+train_epochs = 1
 
 validate_batch_size = 1
 

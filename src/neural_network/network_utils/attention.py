@@ -54,10 +54,15 @@ def reshape_pyramidal(outputs, sequence_length):
     return concat_outputs, tf.floordiv(sequence_length, 2) + tf.floormod(sequence_length, 2)
 
 
-def scaled_dot_product(input_ph, hidden_dim, output_dim, scaled=True, name=None):
+def scaled_dot_product(input_ph, hidden_dim, output_dim, scaled=True, name=None, use_tensorboard=True):
     Q = tf.layers.dense(input_ph, hidden_dim, name=name + "_q" if name is not None else None)  # [batch_size, sequence_length, hidden_dim]
     K = tf.layers.dense(input_ph, hidden_dim, name=name + "_k" if name is not None else None)  # [batch_size, sequence_length, hidden_dim]
     V = tf.layers.dense(input_ph, output_dim, name=name + "_v" if name is not None else None)  # [batch_size, sequence_length, n_classes]
+
+    if use_tensorboard:
+        tf.summary.histogram(Q.name, Q)
+        tf.summary.histogram(K.name, K)
+        tf.summary.histogram(V.name, V)
 
     attention = tf.matmul(Q, K, transpose_b=True)  # [batch_size, sequence_length, sequence_length]
 
