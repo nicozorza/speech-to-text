@@ -46,7 +46,7 @@ network_data.kernel_init_2 = [tf.truncated_normal_initializer(mean=0, stddev=0.1
 network_data.bias_init_2 = [tf.zeros_initializer()] * network_data.num_dense_layers_2
 
 network_data.dense_regularizer = 0.0
-network_data.self_attention_regularizer = 0.0
+network_data.attention_regularizer = 0.0
 
 network_data.beam_width = 0    # 0 -> greedy_decoder, >0 -> beam_search
 

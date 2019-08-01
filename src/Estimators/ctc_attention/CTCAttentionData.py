@@ -33,7 +33,7 @@ class CTCAttentionData(NetworkDataInterface):
         self.bias_init_2 = None
 
         self.dense_regularizer: float = None
-        self.self_attention_regularizer: float = None
+        self.attention_regularizer: float = None
 
         self.beam_width: int = None
 

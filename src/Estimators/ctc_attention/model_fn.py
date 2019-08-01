@@ -112,7 +112,7 @@ def model_fn(features, labels, mode, config, params):
         logits_loss = tf.reduce_mean(tf.reduce_sum(loss))
         loss = logits_loss \
                + params['dense_regularizer'] * dense_loss \
-               + params["self_attention_regularizer"] * attention_loss
+               + params["attention_regularizer"] * attention_loss
         tf.summary.scalar('loss', loss)
 
     with tf.name_scope("label_error_rate"):
