@@ -1,6 +1,6 @@
 import os
 import tensorflow as tf
-from src.neural_network.network_utils import dense_multilayer, dense_layer, multihead_attention
+from src.neural_network.network_utils import dense_multilayer, dense_layer, multihead_attention, add_positional_encoding
 
 
 def model_fn(features, labels, mode, config, params):
@@ -40,13 +40,16 @@ def model_fn(features, labels, mode, config, params):
                                      tensorboard_scope='dense_layer_1')
 
     with tf.name_scope("attention"):
+        if params["attention_add_positional_encoding"]:
+            rnn_input = add_positional_encoding(rnn_input)
+
         attention_output = multihead_attention(
             input_ph=rnn_input,
             num_heads=params['attention_num_heads'],
             hidden_dim=params['attention_hidden_size'],
             hidden_output=params['attention_hidden_output_size'],
             output_dim=params['attention_output_size'])
-        if params["attention_user_layer_normalization"]:
+        if params["attention_use_layer_normalization"]:
             attention_output = tf.contrib.layers.layer_norm(
                 attention_output,
                 trainable=params["attention_layer_normalization_trainable"])

@@ -1,7 +1,8 @@
+import math
 from typing import List
 import tensorflow as tf
 from src.neural_network.network_utils import bidirectional_lstm, lstm_cell
-
+import numpy as np
 
 def bidirectional_pyramidal_rnn(input_ph, seq_len_ph, num_layers: int, num_units: List[int], name: str, activation_list,
                                 use_tensorboard: bool = True, tensorboard_scope: str = None, keep_prob=None, train_ph=False,
@@ -258,3 +259,25 @@ def edit_distance(hypothesis, truth, eos_id, mapping=None):
     truth = dense_to_sparse(truth, eos_id, merge_repeated=True)
 
     return tf.edit_distance(hypothesis, truth, normalize=True)
+
+
+def get_positional_encoding_mask(length, channels, min_timescale=1.0, max_timescale=1.0e4, start_index=0):
+
+    position = tf.to_float(tf.range(length) + start_index)
+    num_timescales = channels // 2
+    log_timescale_increment = (math.log(float(max_timescale) / float(min_timescale)) / (tf.to_float(num_timescales) - 1))
+    inv_timescales = min_timescale * tf.exp(tf.to_float(tf.range(num_timescales)) * -log_timescale_increment)
+    scaled_time = tf.expand_dims(position, 1) * tf.expand_dims(inv_timescales, 0)
+    signal = tf.concat([tf.sin(scaled_time), tf.cos(scaled_time)], axis=1)
+    signal = tf.pad(signal, [[0, 0], [0, tf.mod(channels, 2)]])
+    signal = tf.reshape(signal, [1, length, channels])
+    return signal
+
+
+# Obtained from http://jalammar.github.io/illustrated-transformer/
+def add_positional_encoding(input_ph, min_timescale=1.0, max_timescale=1.0e4, start_index=0):
+    # [batch_size, sequence_length, num_features]
+    length = tf.shape(input_ph)[1]
+    channels = tf.shape(input_ph)[2]
+    signal = get_positional_encoding_mask(length, channels, min_timescale, max_timescale, start_index)
+    return input_ph + signal

@@ -17,11 +17,13 @@ class CTCAttentionData(NetworkDataInterface):
         self.kernel_init_1 = None
         self.bias_init_1 = None
 
-        self.attention_num_heads = None
-        self.attention_hidden_size = None
-        self.attention_hidden_output_size = None
-        self.attention_output_size = None
-        self.attention_user_layer_normalization = None
+        self.attention_num_heads: int = None
+        self.attention_hidden_size: int = None
+        self.attention_hidden_output_size: int = None
+        self.attention_output_size: int = None
+        self.attention_use_layer_normalization: bool = None
+        self.attention_layer_normalization_trainable: bool = None
+        self.attention_add_positional_encoding: bool = None
 
         self.num_dense_layers_2: int = None
         self.num_units_2: List[int] = list()
