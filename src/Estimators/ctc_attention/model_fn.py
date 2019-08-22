@@ -23,54 +23,56 @@ def model_fn(features, labels, mode, config, params):
     if params['noise_stddev'] is not None and params['noise_stddev'] != 0.0:
         input_features = tf.keras.layers.GaussianNoise(stddev=params['noise_stddev'])(inputs=input_features, training=mode == tf.estimator.ModeKeys.TRAIN)
 
-    rnn_input = tf.identity(input_features)
+    dense_1_input = tf.identity(input_features)
     with tf.name_scope("dense_layer_1"):
-        rnn_input = dense_multilayer(input_ph=rnn_input,
-                                     num_layers=params['num_dense_layers_1'],
-                                     num_units=params['num_units_1'],
-                                     name='dense_layer_1',
-                                     activation_list=params['dense_activations_1'],
-                                     use_batch_normalization=params['batch_normalization_1'],
-                                     batch_normalization_trainable=params['batch_normalization_trainable_1'],
-                                     train_ph=mode == tf.estimator.ModeKeys.TRAIN,
-                                     use_tensorboard=True,
-                                     keep_prob_list=params['keep_prob_1'],
-                                     kernel_initializers=params['kernel_init_1'],
-                                     bias_initializers=params['bias_init_1'],
-                                     tensorboard_scope='dense_layer_1')
+        dense_1_output = dense_multilayer(input_ph=dense_1_input,
+                                          num_layers=params['num_dense_layers_1'],
+                                          num_units=params['num_units_1'],
+                                          name='dense_layer_1',
+                                          activation_list=params['dense_activations_1'],
+                                          use_batch_normalization=params['batch_normalization_1'],
+                                          batch_normalization_trainable=params['batch_normalization_trainable_1'],
+                                          train_ph=mode == tf.estimator.ModeKeys.TRAIN,
+                                          use_tensorboard=True,
+                                          keep_prob_list=params['keep_prob_1'],
+                                          kernel_initializers=params['kernel_init_1'],
+                                          bias_initializers=params['bias_init_1'],
+                                          tensorboard_scope='dense_layer_1')
 
     with tf.name_scope("attention"):
         if params["attention_add_positional_encoding"]:
-            rnn_input = add_positional_encoding(rnn_input)
+            dense_1_output = add_positional_encoding(dense_1_output)
 
         attention_output = multihead_attention(
-            input_ph=rnn_input,
+            input_ph=dense_1_output,
             num_heads=params['attention_num_heads'],
             hidden_dim=params['attention_hidden_size'],
             hidden_output=params['attention_hidden_output_size'],
-            output_dim=params['attention_output_size'])
+            output_dim=params['attention_output_size'],
+            activation=params['attention_activation'],
+        )
         if params["attention_use_layer_normalization"]:
             attention_output = tf.contrib.layers.layer_norm(
                 attention_output,
                 trainable=params["attention_layer_normalization_trainable"])
 
     with tf.name_scope("dense_layer_2"):
-        rnn_outputs = dense_multilayer(input_ph=attention_output,
-                                       num_layers=params['num_dense_layers_2'],
-                                       num_units=params['num_units_2'],
-                                       name='dense_layer_2',
-                                       activation_list=params['dense_activations_2'],
-                                       use_batch_normalization=params['batch_normalization_2'],
-                                       batch_normalization_trainable=params['batch_normalization_trainable_2'],
-                                       train_ph=mode == tf.estimator.ModeKeys.TRAIN,
-                                       use_tensorboard=True,
-                                       keep_prob_list=params['keep_prob_2'],
-                                       kernel_initializers=params['kernel_init_2'],
-                                       bias_initializers=params['bias_init_2'],
-                                       tensorboard_scope='dense_layer_2')
+        dense_2_output = dense_multilayer(input_ph=attention_output,
+                                          num_layers=params['num_dense_layers_2'],
+                                          num_units=params['num_units_2'],
+                                          name='dense_layer_2',
+                                          activation_list=params['dense_activations_2'],
+                                          use_batch_normalization=params['batch_normalization_2'],
+                                          batch_normalization_trainable=params['batch_normalization_trainable_2'],
+                                          train_ph=mode == tf.estimator.ModeKeys.TRAIN,
+                                          use_tensorboard=True,
+                                          keep_prob_list=params['keep_prob_2'],
+                                          kernel_initializers=params['kernel_init_2'],
+                                          bias_initializers=params['bias_init_2'],
+                                          tensorboard_scope='dense_layer_2')
 
     with tf.name_scope("dense_output"):
-        dense_output_no_activation = dense_layer(input_ph=rnn_outputs,
+        dense_output_no_activation = dense_layer(input_ph=dense_2_output,
                                                  num_units=params['num_classes'],
                                                  name='dense_output_no_activation',
                                                  activation=None,
@@ -169,6 +171,9 @@ def model_fn(features, labels, mode, config, params):
                 'loss': loss,
                 'ler': tf.reduce_mean(ler),
                 'learning_rate': tf.reduce_mean(learning_rate),
+                # 'feal_len': feat_len,
+                # 'feal_len2': input_features_length,
+                # 'target_len': tf.shape(input_labels)
                 # 'max_predictions': dense_decoded,
                 # 'max_targets': tf.sparse.to_dense(sp_input=input_labels, validate_indices=True),
             },

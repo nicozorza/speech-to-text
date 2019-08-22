@@ -21,6 +21,7 @@ class CTCAttentionData(NetworkDataInterface):
         self.attention_hidden_size: int = None
         self.attention_hidden_output_size: int = None
         self.attention_output_size: int = None
+        self.attention_activation = None
         self.attention_use_layer_normalization: bool = None
         self.attention_layer_normalization_trainable: bool = None
         self.attention_add_positional_encoding: bool = None

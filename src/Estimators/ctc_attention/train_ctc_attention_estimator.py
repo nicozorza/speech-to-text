@@ -18,31 +18,33 @@ network_data.tensorboard_path = project_data.CTC_ATTENTION_TENSORBOARD_PATH
 
 network_data.num_classes = ClassicLabel.num_classes - 1
 network_data.num_features = 494
-network_data.noise_stddev = 0.0
+
+network_data.noise_stddev = 0.1
 
 network_data.num_dense_layers_1 = 1
 network_data.num_units_1 = [400] * network_data.num_dense_layers_1
-network_data.dense_activations_1 = [tf.nn.relu] * network_data.num_dense_layers_1
+network_data.dense_activations_1 = [tf.nn.tanh] * network_data.num_dense_layers_1
 network_data.batch_normalization_1 = False
 network_data.batch_normalization_trainable_1 = False
-network_data.keep_prob_1 = None#[0.6] * network_data.num_dense_layers_1
+network_data.keep_prob_1 = [0.6] * network_data.num_dense_layers_1
 network_data.kernel_init_1 = [tf.truncated_normal_initializer(mean=0, stddev=0.1)] * network_data.num_dense_layers_1
 network_data.bias_init_1 = [tf.zeros_initializer()] * network_data.num_dense_layers_1
 
-network_data.attention_num_heads = 3
-network_data.attention_hidden_size = 128
-network_data.attention_hidden_output_size = 150
-network_data.attention_output_size = 150
+network_data.attention_num_heads = 5
+network_data.attention_hidden_size = 256
+network_data.attention_hidden_output_size = 200
+network_data.attention_output_size = 200
+network_data.attention_activation = tf.nn.tanh
 network_data.attention_use_layer_normalization = True
 network_data.attention_layer_normalization_trainable = True
 network_data.attention_add_positional_encoding = True
 
-network_data.num_dense_layers_2 = 1
+network_data.num_dense_layers_2 = 0
 network_data.num_units_2 = [150]
 network_data.dense_activations_2 = [tf.nn.relu] * network_data.num_dense_layers_2
 network_data.batch_normalization_2 = False
 network_data.batch_normalization_trainable_2 = False
-network_data.keep_prob_2 = None#[0.6, 0.6]
+network_data.keep_prob_2 = [0.8]
 network_data.kernel_init_2 = [tf.truncated_normal_initializer(mean=0, stddev=0.1)] * network_data.num_dense_layers_2
 network_data.bias_init_2 = [tf.zeros_initializer()] * network_data.num_dense_layers_2
 
@@ -51,23 +53,23 @@ network_data.attention_regularizer = 0.1
 
 network_data.beam_width = 0    # 0 -> greedy_decoder, >0 -> beam_search
 
-network_data.learning_rate = 0.0001
+network_data.learning_rate = 0.001
 network_data.use_learning_rate_decay = True
-network_data.learning_rate_decay_steps = 1000
+network_data.learning_rate_decay_steps = 5000
 network_data.learning_rate_decay = 0.98
 
-network_data.clip_gradient = 1
+network_data.clip_gradient = 20
 network_data.optimizer = 'adam'      # 'rms', 'adam', 'momentum', 'sgd'
 network_data.momentum = None
 
 # -------------------------------------------------------------------------------------------------------------------- #
 
-train_flag = True
+train_flag = False
 validate_flag = True
 test_flag = True
 save_predictions = False
 
-restore_run = False
+restore_run = True
 model_dir = 'out/ctc_attention/estimator/'
 
 train_files = ['data/train_database.tfrecords']
@@ -75,8 +77,8 @@ validate_files = ['data/train_database.tfrecords']
 test_files = ['data/train_database.tfrecords']#, 'data/test_database_2.tfrecords']
 save_predictions_files = ['data/train_database.tfrecords']
 
-train_batch_size = 1
-train_epochs = 200
+train_batch_size = 5
+train_epochs = 100
 
 validate_batch_size = 1
 
@@ -110,7 +112,7 @@ if train_flag:
             filenames=train_files,
             batch_size=train_batch_size,
             parse_fn=Database.tfrecord_parse_dense_fn,
-            shuffle_buffer=10,
+            shuffle_buffer=100,
             num_features=network_data.num_features,
             num_epochs=train_epochs)
     )

@@ -55,10 +55,22 @@ def reshape_pyramidal(outputs, sequence_length):
     return concat_outputs, tf.floordiv(sequence_length, 2) + tf.floormod(sequence_length, 2)
 
 
-def scaled_dot_product(input_ph, hidden_dim, output_dim, scaled=True, name=None, use_tensorboard=True):
-    Q = tf.layers.dense(input_ph, hidden_dim, name=name + "_q" if name is not None else None)  # [batch_size, sequence_length, hidden_dim]
-    K = tf.layers.dense(input_ph, hidden_dim, name=name + "_k" if name is not None else None)  # [batch_size, sequence_length, hidden_dim]
-    V = tf.layers.dense(input_ph, output_dim, name=name + "_v" if name is not None else None)  # [batch_size, sequence_length, n_classes]
+def scaled_dot_product(input_ph, hidden_dim, output_dim, scaled=True, activation=None, name=None, use_tensorboard=True):
+    Q = tf.layers.dense(
+        input_ph,
+        activation=activation,
+        units=hidden_dim,
+        name=name + "_q" if name is not None else None)  # [batch_size, sequence_length, hidden_dim]
+    K = tf.layers.dense(
+        input_ph,
+        activation=activation,
+        units=hidden_dim,
+        name=name + "_k" if name is not None else None)  # [batch_size, sequence_length, hidden_dim]
+    V = tf.layers.dense(
+        input_ph,
+        activation=activation,
+        units=output_dim,
+        name=name + "_v" if name is not None else None)  # [batch_size, sequence_length, n_classes]
 
     if use_tensorboard:
         tf.summary.histogram(Q.name, Q)
@@ -77,11 +89,15 @@ def scaled_dot_product(input_ph, hidden_dim, output_dim, scaled=True, name=None,
     return output
 
 
-def self_attention(input_ph, hidden_dim, output_dim, scaled=True):
-    return scaled_dot_product(input_ph, hidden_dim, output_dim, scaled)
+def self_attention(input_ph, hidden_dim, output_dim, scaled=True, activation=None):
+    return scaled_dot_product(input_ph=input_ph,
+                              hidden_dim=hidden_dim,
+                              output_dim=output_dim,
+                              scaled=scaled,
+                              activation=activation)
 
 
-def multihead_attention(input_ph, num_heads, hidden_dim, hidden_output, output_dim, scaled=True):
+def multihead_attention(input_ph, num_heads, hidden_dim, hidden_output, output_dim, scaled=True, activation=None):
     head_list = []
 
     for i in range(num_heads):
@@ -90,6 +106,7 @@ def multihead_attention(input_ph, num_heads, hidden_dim, hidden_output, output_d
             hidden_dim=hidden_dim,
             output_dim=hidden_output,
             scaled=scaled,
+            activation=activation,
             name=f"head_{i}")
         )
     attention = tf.concat(head_list, axis=2)    # [batch_size, sequence_length, output_dim * num_heads]
