@@ -55,7 +55,8 @@ def reshape_pyramidal(outputs, sequence_length):
     return concat_outputs, tf.floordiv(sequence_length, 2) + tf.floormod(sequence_length, 2)
 
 
-def scaled_dot_product(input_ph, hidden_dim, output_dim, scaled=True, activation=None, name=None, use_tensorboard=True):
+def scaled_dot_product(input_ph, input_len, hidden_dim, output_dim, scaled=True, masked=True,
+                       activation=None, name=None, use_tensorboard=True):
     Q = tf.layers.dense(
         input_ph,
         activation=activation,
@@ -83,29 +84,42 @@ def scaled_dot_product(input_ph, hidden_dim, output_dim, scaled=True, activation
         d_k = tf.cast(tf.shape(K)[-1], dtype=tf.float32)
         attention = tf.divide(attention, tf.sqrt(d_k))  # [batch_size, sequence_length, sequence_length]
 
+    if masked:
+        multiplies = tf.shape(input_ph)[1]
+        mask = tf.sequence_mask(
+            tf.tile(tf.expand_dims(input_len, axis=-1), [1, multiplies]),
+            maxlen=tf.reduce_max(input_len),
+            dtype=tf.float32)
+        attention = tf.multiply(attention, mask)
+
     attention = tf.nn.softmax(attention, axis=-1)  # [batch_size, sequence_length, sequence_length]
 
     output = tf.matmul(attention, V)  # [batch_size, sequence_length, output_dim]
     return output
 
 
-def self_attention(input_ph, hidden_dim, output_dim, scaled=True, activation=None):
+def self_attention(input_ph, input_len, hidden_dim, output_dim, scaled=True, masked=True, activation=None):
     return scaled_dot_product(input_ph=input_ph,
+                              input_len=input_len,
                               hidden_dim=hidden_dim,
                               output_dim=output_dim,
                               scaled=scaled,
+                              masked=masked,
                               activation=activation)
 
 
-def multihead_attention(input_ph, num_heads, hidden_dim, hidden_output, output_dim, scaled=True, activation=None):
+def multihead_attention(input_ph, input_len, num_heads, hidden_dim, hidden_output, output_dim, scaled=True,
+                        masked=True, activation=None):
     head_list = []
 
     for i in range(num_heads):
         head_list.append(scaled_dot_product(    # [batch_size, sequence_length, output_dim]
             input_ph=input_ph,
+            input_len=input_len,
             hidden_dim=hidden_dim,
             output_dim=hidden_output,
             scaled=scaled,
+            masked=masked,
             activation=activation,
             name=f"head_{i}")
         )

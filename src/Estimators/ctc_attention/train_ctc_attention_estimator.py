@@ -18,15 +18,16 @@ network_data.tensorboard_path = project_data.CTC_ATTENTION_TENSORBOARD_PATH
 
 network_data.num_classes = ClassicLabel.num_classes - 1
 network_data.num_features = 494
+network_data.num_reduce_by_half = 1
 
-network_data.noise_stddev = 0.1
+network_data.noise_stddev = 0.0
 
 network_data.num_dense_layers_1 = 1
 network_data.num_units_1 = [400] * network_data.num_dense_layers_1
 network_data.dense_activations_1 = [tf.nn.tanh] * network_data.num_dense_layers_1
 network_data.batch_normalization_1 = False
 network_data.batch_normalization_trainable_1 = False
-network_data.keep_prob_1 = [0.6] * network_data.num_dense_layers_1
+network_data.keep_prob_1 = [1.0] * network_data.num_dense_layers_1
 network_data.kernel_init_1 = [tf.truncated_normal_initializer(mean=0, stddev=0.1)] * network_data.num_dense_layers_1
 network_data.bias_init_1 = [tf.zeros_initializer()] * network_data.num_dense_layers_1
 
@@ -34,10 +35,12 @@ network_data.attention_num_heads = 5
 network_data.attention_hidden_size = 256
 network_data.attention_hidden_output_size = 200
 network_data.attention_output_size = 200
-network_data.attention_activation = tf.nn.tanh
-network_data.attention_use_layer_normalization = True
-network_data.attention_layer_normalization_trainable = True
+network_data.attention_activation = None
+network_data.attention_use_layer_normalization = False
+network_data.attention_layer_normalization_trainable = False
 network_data.attention_add_positional_encoding = True
+network_data.attention_scaled = True
+network_data.attention_masked = True
 
 network_data.num_dense_layers_2 = 0
 network_data.num_units_2 = [150]
@@ -64,12 +67,12 @@ network_data.momentum = None
 
 # -------------------------------------------------------------------------------------------------------------------- #
 
-train_flag = False
+train_flag = True
 validate_flag = True
 test_flag = True
 save_predictions = False
 
-restore_run = True
+restore_run = False
 model_dir = 'out/ctc_attention/estimator/'
 
 train_files = ['data/train_database.tfrecords']
@@ -77,8 +80,8 @@ validate_files = ['data/train_database.tfrecords']
 test_files = ['data/train_database.tfrecords']#, 'data/test_database_2.tfrecords']
 save_predictions_files = ['data/train_database.tfrecords']
 
-train_batch_size = 5
-train_epochs = 100
+train_batch_size = 10
+train_epochs = 50
 
 validate_batch_size = 1
 

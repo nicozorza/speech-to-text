@@ -7,6 +7,7 @@ class CTCAttentionData(NetworkDataInterface):
 
         self.num_features: int = None
         self.num_classes: int = None
+        self.num_reduce_by_half: int = None
 
         self.num_dense_layers_1: int = None
         self.num_units_1: List[int] = list()
@@ -25,6 +26,8 @@ class CTCAttentionData(NetworkDataInterface):
         self.attention_use_layer_normalization: bool = None
         self.attention_layer_normalization_trainable: bool = None
         self.attention_add_positional_encoding: bool = None
+        self.attention_scaled: bool = None
+        self.attention_masked: bool = None
 
         self.num_dense_layers_2: int = None
         self.num_units_2: List[int] = list()

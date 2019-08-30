@@ -20,6 +20,12 @@ def model_fn(features, labels, mode, config, params):
     with tf.name_scope("input_labels"):
         input_labels = sparse_target
 
+    subsample_factor = params["num_reduce_by_half"]
+    if subsample_factor is not None and subsample_factor > 0:
+        for i in range(subsample_factor):
+            input_features_length = tf.div(input_features_length, 2) + tf.cast(input_features_length % 2, dtype=tf.int32)
+            input_features = input_features[:, ::2]
+
     if params['noise_stddev'] is not None and params['noise_stddev'] != 0.0:
         input_features = tf.keras.layers.GaussianNoise(stddev=params['noise_stddev'])(inputs=input_features, training=mode == tf.estimator.ModeKeys.TRAIN)
 
@@ -45,11 +51,14 @@ def model_fn(features, labels, mode, config, params):
 
         attention_output = multihead_attention(
             input_ph=dense_1_output,
+            input_len=input_features_length,
             num_heads=params['attention_num_heads'],
             hidden_dim=params['attention_hidden_size'],
             hidden_output=params['attention_hidden_output_size'],
             output_dim=params['attention_output_size'],
             activation=params['attention_activation'],
+            scaled=params["attention_scaled"],
+            masked=params["attention_masked"]
         )
         if params["attention_use_layer_normalization"]:
             attention_output = tf.contrib.layers.layer_norm(
@@ -173,6 +182,7 @@ def model_fn(features, labels, mode, config, params):
                 'learning_rate': tf.reduce_mean(learning_rate),
                 # 'feal_len': feat_len,
                 # 'feal_len2': input_features_length,
+                # 'feal_len3': tf.shape(input_features),
                 # 'target_len': tf.shape(input_labels)
                 # 'max_predictions': dense_decoded,
                 # 'max_targets': tf.sparse.to_dense(sp_input=input_labels, validate_indices=True),
