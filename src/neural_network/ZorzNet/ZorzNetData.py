@@ -48,6 +48,7 @@ class ZorzNetData(NetworkDataInterface):
         self.momentum: float = None
 
         self.noise_stddev: float = None
+        self.num_reduce_by_half: int = None
 
     def as_dict(self):
         return self.__dict__

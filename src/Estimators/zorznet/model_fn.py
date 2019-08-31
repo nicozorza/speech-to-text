@@ -20,6 +20,13 @@ def model_fn(features, labels, mode, config, params):
     with tf.name_scope("input_labels"):
         input_labels = sparse_target
 
+    subsample_factor = params["num_reduce_by_half"]
+    if subsample_factor is not None and subsample_factor > 0:
+        for i in range(subsample_factor):
+            input_features_length = tf.div(input_features_length, 2) + tf.cast(input_features_length % 2,
+                                                                               dtype=tf.int32)
+            input_features = input_features[:, ::2]
+
     if params['noise_stddev'] is not None and params['noise_stddev'] != 0.0:
         input_features = tf.keras.layers.GaussianNoise(stddev=params['noise_stddev'])(inputs=input_features, training=mode == tf.estimator.ModeKeys.TRAIN)
 
@@ -182,7 +189,10 @@ def model_fn(features, labels, mode, config, params):
             tensors={
                 'loss': loss,
                 'ler': tf.reduce_mean(ler),
-                'learning_rate': tf.reduce_mean(learning_rate)
+                'learning_rate': tf.reduce_mean(learning_rate),
+                # 'feal_len': feat_len,
+                # 'feal_len2': input_features_length,
+                # 'feal_len3': tf.shape(input_features),
             },
             every_n_secs=1)
 
