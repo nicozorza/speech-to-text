@@ -88,7 +88,8 @@ def model_fn(features, labels, mode, config, params):
                                        keep_prob_list=params['keep_prob_2'],
                                        kernel_initializers=params['kernel_init_2'],
                                        bias_initializers=params['bias_init_2'],
-                                       tensorboard_scope='dense_layer_2')
+                                       tensorboard_scope='dense_layer_2',
+                                       batch_normalization_training=True)
 
     with tf.name_scope("dense_output"):
         dense_output_no_activation = dense_layer(input_ph=rnn_outputs,

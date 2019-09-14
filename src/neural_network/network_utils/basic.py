@@ -8,26 +8,22 @@ def dense_layer(input_ph, num_units: int, name: str, activation=None,
                 train_ph: bool = True, use_tensorboard: bool = True, keep_prob: float = 0,
                 tensorboard_scope: str = None,
                 kernel_initializer=None,
-                bias_initializer=None):
-
-    if bias_initializer is None:
-        bias_initializer = tf.zeros_initializer()
+                bias_initializer=None, batch_normalization_training=None):
 
     out_ph = tf.layers.dense(
         inputs=input_ph,
         units=num_units,
-        activation=None,
+        activation=activation,
         name=name,
         kernel_initializer=kernel_initializer,
         bias_initializer=bias_initializer
     )
     if use_batch_normalization:
+        bn_training = batch_normalization_training if batch_normalization_training is not None else train_ph
         out_ph = tf.layers.batch_normalization(out_ph,
-                                               name=name+"_batch_norm",
-                                               training=train_ph,
+                                               name=name + "_batch_norm",
+                                               training=bn_training,
                                                trainable=batch_normalization_trainable)
-    if activation is not None:
-        out_ph = activation(out_ph)
 
     if keep_prob != 1:
         out_ph = tf.layers.dropout(out_ph,
@@ -50,7 +46,7 @@ def dense_multilayer(input_ph, num_layers: int, num_units: List[int], name: str,
                      train_ph: bool = True, use_tensorboard: bool = True, keep_prob_list: List[float] = 0,
                      tensorboard_scope: str = None,
                      kernel_initializers=None,
-                     bias_initializers=None):
+                     bias_initializers=None, batch_normalization_training=None):
 
     if activation_list is None:
         activation_list = [None] * num_layers
@@ -76,5 +72,6 @@ def dense_multilayer(input_ph, num_layers: int, num_units: List[int], name: str,
                                tensorboard_scope=tensorboard_scope,
                                kernel_initializer=kernel_initializers[_],
                                bias_initializer=bias_initializers[_],
-                               batch_normalization_trainable=batch_normalization_trainable)
+                               batch_normalization_trainable=batch_normalization_trainable,
+                               batch_normalization_training=batch_normalization_training)
     return input_ph
