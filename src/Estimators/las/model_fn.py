@@ -76,8 +76,7 @@ def model_fn(features,
                                            keep_prob_list=params['keep_prob_2'],
                                            kernel_initializers=params['kernel_init_2'],
                                            bias_initializers=params['bias_init_2'],
-                                           tensorboard_scope='dense_layer_2',
-                                           batch_normalization_training=True)
+                                           tensorboard_scope='dense_layer_2')
 
     with tf.variable_scope('tile_batch'):
         batch_size = tf.shape(listener_output)[0]
@@ -250,15 +249,14 @@ def model_fn(features,
         else:
             optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
 
-        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-        with tf.control_dependencies(update_ops):
-            if params['clip_gradient'] != 0:
-                grads = tf.gradients(loss, tf.trainable_variables())
-                grads, _ = tf.clip_by_global_norm(grads, params['clip_gradient'])  # gradient clipping
-                grads_and_vars = list(zip(grads, tf.trainable_variables()))
-                train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
-            else:
-                train_op = optimizer.minimize(loss, global_step=global_step)
+        loss = tf.tuple([loss], control_inputs=tf.get_collection(tf.GraphKeys.UPDATE_OPS))[0]
+        if params['clip_gradient'] != 0:
+            grads = tf.gradients(loss, tf.trainable_variables())
+            grads, _ = tf.clip_by_global_norm(grads, params['clip_gradient'])
+            grads_and_vars = list(zip(grads, tf.trainable_variables()))
+            train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
+        else:
+            train_op = optimizer.minimize(loss, global_step=global_step)
 
     logging_hook = tf.train.LoggingTensorHook(
         tensors={
