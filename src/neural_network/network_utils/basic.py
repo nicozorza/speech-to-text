@@ -13,7 +13,7 @@ def dense_layer(input_ph, num_units: int, name: str, activation=None,
     out_ph = tf.layers.dense(
         inputs=input_ph,
         units=num_units,
-        activation=activation,
+        activation=None,
         name=name,
         kernel_initializer=kernel_initializer,
         bias_initializer=bias_initializer
@@ -23,6 +23,8 @@ def dense_layer(input_ph, num_units: int, name: str, activation=None,
                                                name=name + "_batch_norm",
                                                training=train_ph,
                                                trainable=batch_normalization_trainable)
+    if activation is not None:
+        out_ph = activation(out_ph)
 
     if keep_prob != 1:
         out_ph = tf.layers.dropout(out_ph,
