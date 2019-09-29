@@ -61,17 +61,27 @@ def scaled_dot_product(input_ph, input_len, hidden_dim, output_dim, scaled=True,
         input_ph,
         activation=activation,
         units=hidden_dim,
+        use_bias=False,
+        kernel_initializer=tf.truncated_normal_initializer(mean=0, stddev=0.1),
         name=name + "_q" if name is not None else None)  # [batch_size, sequence_length, hidden_dim]
     K = tf.layers.dense(
         input_ph,
         activation=activation,
         units=hidden_dim,
+        use_bias=False,
+        kernel_initializer=tf.truncated_normal_initializer(mean=0, stddev=0.1),
         name=name + "_k" if name is not None else None)  # [batch_size, sequence_length, hidden_dim]
     V = tf.layers.dense(
         input_ph,
         activation=activation,
         units=output_dim,
+        use_bias=False,
+        kernel_initializer=tf.truncated_normal_initializer(mean=0, stddev=0.1),
         name=name + "_v" if name is not None else None)  # [batch_size, sequence_length, n_classes]
+
+    tf.add_to_collection(tf.GraphKeys.TABLE_INITIALIZERS, Q)
+    tf.add_to_collection(tf.GraphKeys.TABLE_INITIALIZERS, K)
+    tf.add_to_collection(tf.GraphKeys.TABLE_INITIALIZERS, V)
 
     if use_tensorboard:
         tf.summary.histogram(Q.name, Q)
@@ -292,7 +302,8 @@ def edit_distance(hypothesis, truth, eos_id, mapping=None):
     return tf.edit_distance(hypothesis, truth, normalize=True)
 
 
-def get_positional_encoding_mask(length, channels, min_timescale=1.0, max_timescale=1.0e4, start_index=0):
+def jalammar_transformer_positional_encoding(length, channels, min_timescale=1.0, max_timescale=1.0e4, start_index=0):
+    """ Reference: http://jalammar.github.io/illustrated-transformer/ """
 
     position = tf.to_float(tf.range(length) + start_index)
     num_timescales = channels // 2
@@ -305,10 +316,42 @@ def get_positional_encoding_mask(length, channels, min_timescale=1.0, max_timesc
     return signal
 
 
-# Obtained from http://jalammar.github.io/illustrated-transformer/
-def add_positional_encoding(input_ph, min_timescale=1.0, max_timescale=1.0e4, start_index=0):
+def tf_transformer_positional_encoding(position, d_model):
+    """ Reference: https://www.tensorflow.org/beta/tutorials/text/transformer """
+    def get_angles(pos, i, d_model):
+        angle_rates = 1 / np.power(10000, (2 * (i // 2)) / tf.cast(d_model, dtype=tf.int32))
+        pos = tf.cast(pos, dtype=tf.float64)
+        return pos * angle_rates
+
+    angle_rads = get_angles(tf.range(position)[:, np.newaxis],
+                            tf.range(d_model)[np.newaxis, :],
+                            d_model)
+
+    # apply sin to even indices in the array; 2i
+    even_new = tf.sin(angle_rads[:, 0::2])
+
+    # apply cos to odd indices in the array; 2i+1
+    odd_new = tf.cos(angle_rads[:, 1::2])
+
+    angle_rads = tf.reshape(
+        tf.concat([even_new[..., tf.newaxis], odd_new[..., tf.newaxis]], axis=-1),
+        [tf.shape(even_new)[0], -1])
+
+    pos_encoding = angle_rads[np.newaxis, ...]
+
+    return tf.cast(pos_encoding, dtype=tf.float32)
+
+
+def add_positional_encoding(input_ph, min_timescale=1.0, max_timescale=1.0e4, start_index=0,
+                            encoding_type: str = "tf-transformer"):
+    """
+    encoding_type: "tf-transformer" or "jalammar-transformer"
+    """
     # [batch_size, sequence_length, num_features]
     length = tf.shape(input_ph)[1]
     channels = tf.shape(input_ph)[2]
-    signal = get_positional_encoding_mask(length, channels, min_timescale, max_timescale, start_index)
+    if encoding_type == "jalammar-transformer":
+        signal = jalammar_transformer_positional_encoding(length, channels, min_timescale, max_timescale, start_index)
+    else:
+        signal = tf_transformer_positional_encoding(length, channels)
     return input_ph + signal

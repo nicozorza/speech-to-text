@@ -1,6 +1,7 @@
 import os
 import tensorflow as tf
-from src.neural_network.network_utils import dense_multilayer, dense_layer, multihead_attention, add_positional_encoding
+from src.neural_network.network_utils import dense_multilayer, dense_layer, multihead_attention, \
+    add_positional_encoding
 
 
 def model_fn(features, labels, mode, config, params):
@@ -47,7 +48,7 @@ def model_fn(features, labels, mode, config, params):
 
     with tf.name_scope("attention"):
         if params["attention_add_positional_encoding"]:
-            dense_1_output = add_positional_encoding(dense_1_output)
+            dense_1_output = add_positional_encoding(dense_1_output, encoding_type=params["positional_encoding_type"])
 
         attention_output = multihead_attention(
             input_ph=dense_1_output,

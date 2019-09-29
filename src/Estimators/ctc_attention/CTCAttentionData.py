@@ -28,6 +28,7 @@ class CTCAttentionData(NetworkDataInterface):
         self.attention_add_positional_encoding: bool = None
         self.attention_scaled: bool = None
         self.attention_masked: bool = None
+        self.positional_encoding_type: str = None   # "tf-transformer" or "jalammar-transformer"
 
         self.num_dense_layers_2: int = None
         self.num_units_2: List[int] = list()
