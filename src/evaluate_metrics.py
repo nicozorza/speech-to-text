@@ -1,6 +1,8 @@
 import argparse
-from src.utils.ProjectData import ProjectData
 from src.utils.sentence_utils import ler, wer
+import matplotlib.pyplot as plt
+from scipy import stats
+import numpy as np
 
 
 if __name__ == '__main__':
@@ -9,8 +11,6 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--truth', help='Path to ground truth file', required=True)
     args = vars(parser.parse_args())
 
-    project_data = ProjectData()
-
     predictions_file = open(args['predictions'], 'r')
     targets_file = open(args['truth'], 'r')
 
@@ -18,6 +18,8 @@ if __name__ == '__main__':
     predictions_file.close()
     targets_list = list(map(lambda x: x.replace('\n', ''), targets_file.readlines()))
     targets_file.close()
+
+    error_list = []
 
     acum_wer = 0
     acum_ler = 0
@@ -30,12 +32,27 @@ if __name__ == '__main__':
         print(f"Pred: {predictions_list[i]}")
         print()
 
+        error_list.append({
+            'len': len(targets_list[i]),
+            'ler': l,
+            'wer': w
+        })
+
         acum_ler += l
         acum_wer += w
 
     print("Final results")
     print(f"LER: {acum_ler / len(predictions_list)}")
     print(f"WER: {acum_wer / len(predictions_list)}")
+
+    if args.get('graphics'):
+        lengths = list(map(lambda x: x['len'], error_list))
+        values = list(map(lambda x: x['ler'], error_list))
+        bin_means, bin_edges, binnumber = stats.binned_statistic(lengths, values, statistic='mean', bins=100)
+        bin_width = (bin_edges[1] - bin_edges[0])
+        bin_centers = bin_edges[1:] - bin_width / 2
+        plt.plot(bin_centers, bin_means)
+        plt.show()
 
 
 
