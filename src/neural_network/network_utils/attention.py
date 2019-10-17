@@ -355,3 +355,56 @@ def add_positional_encoding(input_ph, min_timescale=1.0, max_timescale=1.0e4, st
     else:
         signal = tf_transformer_positional_encoding(length, channels)
     return input_ph + signal
+
+
+def point_wise_feed_forward_network(input_ph, output_dim, hidden_dim):
+    input_ph = tf.layers.dense(input_ph, units=hidden_dim, activation=tf.nn.relu)
+    input_ph = tf.layers.dense(input_ph, units=output_dim, activation=None)
+    return input_ph
+
+def scaled_dot_product_attention(query, key, value, masked=False):
+    #Attention(Q, K, V ) = softmax(QKt / root dk)V
+    key_seq_length = tf.cast(tf.shape(key)[-2], dtype=tf.float32)
+
+    key = tf.transpose(key, perm=[0, 2, 1])
+    outputs = tf.matmul(query, key) / tf.sqrt(key_seq_length)
+
+    if masked:
+        diag_vals = tf.ones_like(outputs[0, :, :])
+        tril = tf.linalg.LinearOperatorLowerTriangular(diag_vals).to_dense()
+        masks = tf.tile(tf.expand_dims(tril, 0), [tf.shape(outputs)[0], 1, 1])
+
+        paddings = tf.ones_like(masks) * (-2 ** 32 + 1)
+        outputs = tf.where(tf.equal(masks, 0), paddings, outputs)
+
+    attention_map = tf.nn.softmax(outputs)
+
+    return tf.matmul(attention_map, value)
+
+def multi_head_attention(input_ph, heads, num_features, masked=False):
+    # MultiHead(Q, K, V ) = Concat(head1, ..., headh)WO
+    with tf.variable_scope("multi_head_attention", reuse=tf.AUTO_REUSE):
+
+        query = tf.layers.dense(inputs=input_ph, units=num_features, activation=tf.nn.relu)
+        key = tf.layers.dense(inputs=input_ph, units=num_features, activation=tf.nn.relu)
+        value = tf.layers.dense(inputs=input_ph, units=num_features, activation=tf.nn.relu)
+
+        tf.summary.histogram(query.name, query)
+        tf.summary.histogram(key.name, key)
+        tf.summary.histogram(value.name, value)
+
+        query = tf.concat(tf.split(query, heads, axis=-1), axis=0)
+        key = tf.concat(tf.split(key, heads, axis=-1), axis=0)
+        value = tf.concat(tf.split(value, heads, axis=-1), axis=0)
+
+        attention_map = scaled_dot_product_attention(query, key, value, masked)
+
+        attn_outputs = tf.concat(tf.split(attention_map, heads, axis=0), axis=-1)
+
+        return attn_outputs
+
+def sublayer_connection(input_ph, sublayer, keep_prob=1):
+    return tf.layers.dropout(
+        inputs=tf.contrib.layers.layer_norm(input_ph + sublayer),
+        rate=1-keep_prob
+    )

@@ -1,7 +1,7 @@
 import os
 import tensorflow as tf
 from src.neural_network.network_utils import dense_multilayer, dense_layer, multihead_attention, \
-    add_positional_encoding
+    add_positional_encoding, sublayer_connection, multi_head_attention, point_wise_feed_forward_network
 
 
 def model_fn(features, labels, mode, config, params):
@@ -50,21 +50,28 @@ def model_fn(features, labels, mode, config, params):
         if params["attention_add_positional_encoding"]:
             dense_1_output = add_positional_encoding(dense_1_output, encoding_type=params["positional_encoding_type"])
 
-        attention_output = multihead_attention(
-            input_ph=dense_1_output,
-            input_len=input_features_length,
-            num_heads=params['attention_num_heads'],
-            hidden_dim=params['attention_hidden_size'],
-            hidden_output=params['attention_hidden_output_size'],
-            output_dim=params['attention_output_size'],
-            activation=params['attention_activation'],
-            scaled=params["attention_scaled"],
-            masked=params["attention_masked"]
-        )
-        if params["attention_use_layer_normalization"]:
-            attention_output = tf.contrib.layers.layer_norm(
-                attention_output,
-                trainable=params["attention_layer_normalization_trainable"])
+        self_attn = sublayer_connection(input_ph=dense_1_output,
+                                        sublayer=multi_head_attention(dense_1_output, 4, 400, False))
+
+        network_layer = point_wise_feed_forward_network(self_attn, 400, 400)
+
+        attention_output = sublayer_connection(self_attn, network_layer)
+
+        # attention_output = multihead_attention(
+        #     input_ph=dense_1_output,
+        #     input_len=input_features_length,
+        #     num_heads=params['attention_num_heads'],
+        #     hidden_dim=params['attention_hidden_size'],
+        #     hidden_output=params['attention_hidden_output_size'],
+        #     output_dim=params['attention_output_size'],
+        #     activation=params['attention_activation'],
+        #     scaled=params["attention_scaled"],
+        #     masked=params["attention_masked"]
+        # )
+        # if params["attention_use_layer_normalization"]:
+        #     attention_output = tf.contrib.layers.layer_norm(
+        #         attention_output,
+        #         trainable=params["attention_layer_normalization_trainable"])
 
     with tf.name_scope("dense_layer_2"):
         dense_2_output = dense_multilayer(input_ph=attention_output,
