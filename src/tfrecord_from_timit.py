@@ -25,7 +25,7 @@ feature_config.num_filters = 40
 feature_config.num_ceps = 26
 feature_config.mfcc_window = np.hanning
 
-label_type = "las"  # "classic", "las", "optim"
+label_type = "classic"  # "classic", "las", "optim"
 use_embedding = False
 word_level = False
 vocab_file = project_data.VOCAB_FILE
