@@ -76,7 +76,14 @@ Una vez configurados los hiperparámetros ya es posible comenzar a entrenar y va
 distintas redes.
 
 ## Resultados
-En la siguiente tabla se presenta un resumen de los resultados obtenidos mediante estas redes:
+Para evaluar el error de 
+los distintos modelos se deben ejecutar los scripts [`train_zorznet_estimator.py`](src/Estimators/zorznet/train_zorznet_estimator.py) y 
+[`train_las_estimator.py`](src/Estimators/las/train_las_estimator.py) con la opción `save_predictions=True` de manera de que 
+se almacenen las predicciones de la red en un archivo. Luego se debe ejecutar el script [`evaluate_metrics.py`](src/evaluate_metrics.py) 
+para comparar dichas predicciones con las oraciones reales.  
+El script se debe ejecutar como `python3.6 evaluate_metrics.py -p predictions.txt -t truth.txt`  
+
+En la siguiente tabla se presenta un resumen de los resultados obtenidos mediante estas redes.
 
 |Red|Dataset|LER|WER|LM|
 |:---:|:---:|:---:|:---:|:---:|
