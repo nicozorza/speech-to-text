@@ -29,7 +29,7 @@ numpy==1.15.4
 oauth==1.0.1
 olefile==0.44
 pexpect==4.2.1
-Pillow==4.1.1
+Pillow==6.2.0
 pipenv==2018.11.26
 protobuf==3.6.1
 pycups==1.9.73
