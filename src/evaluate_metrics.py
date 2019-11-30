@@ -1,24 +1,12 @@
 import argparse
+import sys
+sys.path.append('.')
 from src.utils.sentence_utils import ler, wer
 import matplotlib.pyplot as plt
 from scipy import stats
-import numpy as np
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Measure WER and LER between two files. Each line must contain a sentence.')
-    parser.add_argument('-p', '--predictions', help='Path to predictions file', required=True)
-    parser.add_argument('-t', '--truth', help='Path to ground truth file', required=True)
-    args = vars(parser.parse_args())
-
-    predictions_file = open(args['predictions'], 'r')
-    targets_file = open(args['truth'], 'r')
-
-    predictions_list = list(map(lambda x: x.replace('\n', ''), predictions_file.readlines()))
-    predictions_file.close()
-    targets_list = list(map(lambda x: x.replace('\n', ''), targets_file.readlines()))
-    targets_file.close()
-
+def evaluate_metrics(predictions_list, targets_list, show_graphics):
     error_list = []
 
     acum_wer = 0
@@ -45,7 +33,7 @@ if __name__ == '__main__':
     print(f"LER: {acum_ler / len(predictions_list)}")
     print(f"WER: {acum_wer / len(predictions_list)}")
 
-    if args.get('graphics'):
+    if show_graphics:
         lengths = list(map(lambda x: x['len'], error_list))
         values = list(map(lambda x: x['ler'], error_list))
         bin_means, bin_edges, binnumber = stats.binned_statistic(lengths, values, statistic='mean', bins=100)
@@ -55,7 +43,19 @@ if __name__ == '__main__':
         plt.show()
 
 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Measure WER and LER between two files. Each line must contain a sentence.')
+    parser.add_argument('-p', '--predictions', help='Path to predictions file', required=True)
+    parser.add_argument('-t', '--truth', help='Path to ground truth file', required=True)
+    parser.add_argument('-g', '--graphics', help='Plot results', required=False)
+    args = vars(parser.parse_args())
 
+    predictions_file = open(args['predictions'], 'r')
+    targets_file = open(args['truth'], 'r')
 
+    predictions_list = list(map(lambda x: x.replace('\n', ''), predictions_file.readlines()))
+    predictions_file.close()
+    targets_list = list(map(lambda x: x.replace('\n', ''), targets_file.readlines()))
+    targets_file.close()
 
-
+    evaluate_metrics(predictions_list, targets_list, args.get('graphics'))
