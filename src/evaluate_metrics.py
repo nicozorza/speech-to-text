@@ -1,14 +1,16 @@
 import argparse
+import sys
+sys.path.append('.')
 from src.utils.sentence_utils import ler, wer
 import matplotlib.pyplot as plt
 from scipy import stats
-import numpy as np
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Measure WER and LER between two files. Each line must contain a sentence.')
     parser.add_argument('-p', '--predictions', help='Path to predictions file', required=True)
     parser.add_argument('-t', '--truth', help='Path to ground truth file', required=True)
+    parser.add_argument('-g', '--graphics', help='Plot results', required=False)
     args = vars(parser.parse_args())
 
     predictions_file = open(args['predictions'], 'r')
@@ -53,9 +55,3 @@ if __name__ == '__main__':
         bin_centers = bin_edges[1:] - bin_width / 2
         plt.plot(bin_centers, bin_means)
         plt.show()
-
-
-
-
-
-
